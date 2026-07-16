@@ -38,7 +38,9 @@ import {
   Tags,
   ArrowLeft,
   Ticket,
-  Copy
+  Copy,
+  UserPlus,
+  Shield
 } from "lucide-react";
 import { ServiceItem, GamePackage } from "../data/packages";
 
@@ -60,7 +62,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
   // Sidebar state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState<"dashboard" | "orders" | "deposits" | "users" | "categories" | "games" | "vouchers" | "products" | "qrcode" | "requirements" | "banners">("dashboard");
+  const [adminTab, setAdminTab] = useState<"dashboard" | "orders" | "deposits" | "users" | "categories" | "games" | "vouchers" | "products" | "qrcode" | "requirements" | "banners" | "team">("dashboard");
 
   // Dynamic state loaded from DB
   const [dbGames, setDbGames] = useState<any[]>([]);
@@ -71,6 +73,22 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   const [globalRequirements, setGlobalRequirements] = useState<any[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<any>({ qrCode: "", esewaNum: "" });
   const [currentBanners, setCurrentBanners] = useState<string[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+
+  // Add Team Member Form State
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamEmail, setNewTeamEmail] = useState("");
+  const [newTeamRole, setNewTeamRole] = useState("Support Staff");
+  const [newTeamPhone, setNewTeamPhone] = useState("");
+  const [newTeamStatus, setNewTeamStatus] = useState<"Active" | "Inactive">("Active");
+
+  // Edit Team Member Form State
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamEmail, setEditTeamEmail] = useState("");
+  const [editTeamRole, setEditTeamRole] = useState("Support Staff");
+  const [editTeamPhone, setEditTeamPhone] = useState("");
+  const [editTeamStatus, setEditTeamStatus] = useState<"Active" | "Inactive">("Active");
 
   // Helper to determine if a game/service is a Voucher-category game
   const isVoucherGame = (g: any) => {
@@ -340,6 +358,21 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
       }
     });
 
+    // 9. Fetch Team Members
+    const teamRef = ref(db, "team_members");
+    const unsubscribeTeam = onValue(teamRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setTeamMembers(list);
+      } else {
+        setTeamMembers([]);
+      }
+    });
+
     return () => {
       unsubscribeUsers();
       unsubscribeAllOrders();
@@ -349,6 +382,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
       unsubscribePayment();
       unsubscribeBanners();
       unsubscribeCategories();
+      unsubscribeTeam();
     };
   }, [db]);
 
@@ -995,6 +1029,81 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
     }
   };
 
+  // ---------------- TEAM MEMBERS CRUD ----------------
+  const addTeamMember = async () => {
+    if (!newTeamName.trim()) {
+      alert("Please enter team member name.");
+      return;
+    }
+    if (!newTeamEmail.trim()) {
+      alert("Please enter team member email.");
+      return;
+    }
+    const newMember = {
+      name: newTeamName.trim(),
+      email: newTeamEmail.trim().toLowerCase(),
+      role: newTeamRole,
+      phone: newTeamPhone.trim(),
+      status: newTeamStatus,
+      createdAt: new Date().toISOString()
+    };
+    try {
+      const teamRef = ref(db, "team_members");
+      const newKey = push(teamRef).key;
+      if (newKey) {
+        await set(ref(db, `team_members/${newKey}`), newMember);
+        setNewTeamName("");
+        setNewTeamEmail("");
+        setNewTeamRole("Support Staff");
+        setNewTeamPhone("");
+        setNewTeamStatus("Active");
+        alert("Team member added successfully!");
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const updateTeamMember = async (id: string) => {
+    if (!editTeamName.trim()) {
+      alert("Please enter team member name.");
+      return;
+    }
+    if (!editTeamEmail.trim()) {
+      alert("Please enter team member email.");
+      return;
+    }
+    try {
+      await update(ref(db, `team_members/${id}`), {
+        name: editTeamName.trim(),
+        email: editTeamEmail.trim().toLowerCase(),
+        role: editTeamRole,
+        phone: editTeamPhone.trim(),
+        status: editTeamStatus
+      });
+      setEditingTeamId(null);
+      setEditTeamName("");
+      setEditTeamEmail("");
+      setEditTeamRole("Support Staff");
+      setEditTeamPhone("");
+      setEditTeamStatus("Active");
+      alert("Team member updated successfully!");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const deleteTeamMember = async (id: string) => {
+    if (await confirmAction("Delete this team member?")) {
+      try {
+        await remove(ref(db, `team_members/${id}`));
+        alert("Team member removed!");
+      } catch (err: any) {
+        alert(err.message);
+      }
+    }
+  };
+
   // ---------------- COMPUTING STATS ----------------
   const totalSales = allOrders
     .filter(o => o.status === "approved")
@@ -1065,6 +1174,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                 {adminTab === "qrcode" && "Payment settings details"}
                 {adminTab === "requirements" && "Dynamic Order Requirements manager"}
                 {adminTab === "banners" && "Slide banners manager"}
+                {adminTab === "team" && "Team Members Manager"}
               </p>
             </div>
           ) : adminTab === "categories" ? (
@@ -1158,7 +1268,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     { id: "products", label: "Products", icon: ShoppingCart },
                     { id: "requirements", label: "Requirements", icon: Sliders },
                     { id: "qrcode", label: "QR Code & Payments", icon: QrCode },
-                    { id: "banners", label: "Slide Banners", icon: ImageIcon }
+                    { id: "banners", label: "Slide Banners", icon: ImageIcon },
+                    { id: "team", label: "Add Team Member", icon: UserPlus }
                   ].map((item) => {
                     const Icon = item.icon;
                     const isActive = adminTab === item.id;
@@ -3638,6 +3749,273 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                 onClick={() => deleteBanner(index)}
                                 className="p-2 bg-red-950/10 hover:bg-red-950/30 border border-red-900/20 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
                                 title="Remove Slide"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span className="sm:hidden">DELETE</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 7. TEAM MEMBERS CRUD */}
+        {adminTab === "team" && (
+          <div className="space-y-6 text-xs font-mono">
+            {/* Add Team Member Area */}
+            <div className="bg-black/30 border border-zinc-900 p-5 rounded-2xl space-y-4">
+              <span className="text-[10px] text-red-500 font-extrabold uppercase tracking-widest block font-orbitron">
+                Register New Team Member
+              </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mandip Mahato"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. member@bnyshop.com"
+                      value={newTeamEmail}
+                      onChange={(e) => setNewTeamEmail(e.target.value)}
+                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Assigned Role</label>
+                    <select
+                      value={newTeamRole}
+                      onChange={(e) => setNewTeamRole(e.target.value)}
+                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white text-xs focus:outline-none focus:border-red-500 font-sans"
+                    >
+                      <option value="Administrator">Administrator</option>
+                      <option value="Manager">Manager</option>
+                      <option value="Moderator">Moderator</option>
+                      <option value="Support Staff">Support Staff</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Phone Number (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. +977-980000000"
+                        value={newTeamPhone}
+                        onChange={(e) => setNewTeamPhone(e.target.value)}
+                        className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Status</label>
+                      <select
+                        value={newTeamStatus}
+                        onChange={(e) => setNewTeamStatus(e.target.value as "Active" | "Inactive")}
+                        className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white text-xs focus:outline-none focus:border-red-500 font-sans"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={addTeamMember}
+                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 cursor-pointer transition-all shadow-[0_4px_12px_rgba(220,38,38,0.2)] active:scale-95 animate-none"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>ADD TEAM MEMBER</span>
+                </button>
+              </div>
+            </div>
+
+            {/* List of Current Team Members */}
+            <div className="space-y-3">
+              <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest block">
+                Registered Team Members ({teamMembers.length})
+              </span>
+
+              {teamMembers.length === 0 ? (
+                <div className="bg-black/20 border border-zinc-900 p-8 rounded-2xl text-center text-zinc-500">
+                  No registered team members found. Register a new member above.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {teamMembers.map((member) => {
+                    const isEditing = editingTeamId === member.id;
+
+                    return (
+                      <div
+                        key={member.id}
+                        className={`bg-black/30 border rounded-2xl p-4 transition-all ${
+                          isEditing ? "border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.05)]" : "border-zinc-900 hover:border-zinc-800"
+                        }`}
+                      >
+                        {isEditing ? (
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+                              <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Editing Team Member</span>
+                              <button
+                                onClick={() => setEditingTeamId(null)}
+                                className="text-zinc-500 hover:text-white"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-3 font-sans">
+                                <div>
+                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Full Name</label>
+                                  <input
+                                    type="text"
+                                    value={editTeamName}
+                                    onChange={(e) => setEditTeamName(e.target.value)}
+                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Email Address</label>
+                                  <input
+                                    type="email"
+                                    value={editTeamEmail}
+                                    onChange={(e) => setEditTeamEmail(e.target.value)}
+                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 font-sans">
+                                <div>
+                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Assigned Role</label>
+                                  <select
+                                    value={editTeamRole}
+                                    onChange={(e) => setEditTeamRole(e.target.value)}
+                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none"
+                                  >
+                                    <option value="Administrator">Administrator</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="Moderator">Moderator</option>
+                                    <option value="Support Staff">Support Staff</option>
+                                  </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Phone</label>
+                                    <input
+                                      type="text"
+                                      value={editTeamPhone}
+                                      onChange={(e) => setEditTeamPhone(e.target.value)}
+                                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Status</label>
+                                    <select
+                                      value={editTeamStatus}
+                                      onChange={(e) => setEditTeamStatus(e.target.value as "Active" | "Inactive")}
+                                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none"
+                                    >
+                                      <option value="Active">Active</option>
+                                      <option value="Inactive">Inactive</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-zinc-900">
+                              <button
+                                onClick={() => setEditingTeamId(null)}
+                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white px-4 py-2 rounded-xl font-bold cursor-pointer transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => updateTeamMember(member.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                <span>Save Changes</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between animate-none">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-red-500 text-sm font-orbitron flex-shrink-0">
+                                {member.name ? member.name.charAt(0).toUpperCase() : "T"}
+                              </div>
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-bold text-white font-sans">{member.name}</span>
+                                  <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[8px] text-zinc-400 font-bold uppercase tracking-wide font-sans">
+                                    {member.role}
+                                  </span>
+                                  <span className={`flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide font-sans px-2 py-0.5 rounded ${
+                                    member.status === "Active" 
+                                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-500" 
+                                      : "bg-red-500/10 border border-red-500/20 text-red-500"
+                                  }`}>
+                                    <span className={`w-1 h-1 rounded-full ${member.status === "Active" ? "bg-emerald-500" : "bg-red-500"}`} />
+                                    {member.status}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 truncate font-mono select-all animate-none" title={member.email}>
+                                  <span className="text-zinc-600 font-bold mr-1">EMAIL:</span> {member.email}
+                                </div>
+                                {member.phone && (
+                                  <div className="text-[10px] text-zinc-500 truncate font-mono select-all animate-none" title={member.phone}>
+                                    <span className="text-zinc-600 font-bold mr-1">PHONE:</span> {member.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-zinc-900 pt-3 sm:pt-0">
+                              <button
+                                onClick={() => {
+                                  setEditingTeamId(member.id);
+                                  setEditTeamName(member.name || "");
+                                  setEditTeamEmail(member.email || "");
+                                  setEditTeamRole(member.role || "Support Staff");
+                                  setEditTeamPhone(member.phone || "");
+                                  setEditTeamStatus(member.status || "Active");
+                                }}
+                                className="flex-1 sm:flex-initial p-2 bg-zinc-900/60 hover:bg-zinc-900 hover:text-white rounded-xl border border-zinc-800 text-zinc-400 transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
+                                title="Edit Team Member"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-red-500" />
+                                <span>EDIT</span>
+                              </button>
+                              <button
+                                onClick={() => deleteTeamMember(member.id)}
+                                className="p-2 bg-red-950/10 hover:bg-red-950/30 border border-red-900/20 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
+                                title="Remove Team Member"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span className="sm:hidden">DELETE</span>

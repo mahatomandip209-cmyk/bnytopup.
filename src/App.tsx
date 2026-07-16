@@ -236,10 +236,25 @@ export default function App() {
       }
     });
 
+    const teamRef = ref(db, "team_members");
+    const unsubscribeTeam = onValue(teamRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setDbTeamMembers(list);
+      } else {
+        setDbTeamMembers([]);
+      }
+    });
+
     return () => {
       unsubscribeGames();
       unsubscribeCategories();
       unsubscribePayment();
+      unsubscribeTeam();
     };
   }, [db]);
 
@@ -296,7 +311,9 @@ export default function App() {
   ]);
 
   // Is Admin detection
-  const isAdmin = currentUser?.email === "bnyshopadminpanel@gmail.com";
+  const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
+  const isAdmin = currentUser?.email === "bnyshopadminpanel@gmail.com" || 
+    dbTeamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
 
   // PWA/Install Banner States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
