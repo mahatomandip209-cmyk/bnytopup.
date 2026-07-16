@@ -90,6 +90,17 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   const [editTeamPhone, setEditTeamPhone] = useState("");
   const [editTeamStatus, setEditTeamStatus] = useState<"Active" | "Inactive">("Active");
 
+  // Determine if logged-in user is Support Staff
+  const isSupportStaff = currentUser?.email !== "bnyshopadminpanel@gmail.com" &&
+    teamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
+
+  // Restrict access for Support Staff
+  useEffect(() => {
+    if (isSupportStaff && adminTab !== "orders" && adminTab !== "deposits") {
+      setAdminTab("orders");
+    }
+  }, [isSupportStaff, adminTab, teamMembers]);
+
   // Helper to determine if a game/service is a Voucher-category game
   const isVoucherGame = (g: any) => {
     if (!g) return false;
@@ -1238,7 +1249,12 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     { id: "qrcode", label: "QR Code & Payments", icon: QrCode },
                     { id: "banners", label: "Slide Banners", icon: ImageIcon },
                     { id: "team", label: "Add Team Member", icon: UserPlus }
-                  ].map((item) => {
+                  ].filter((item) => {
+                    if (isSupportStaff) {
+                      return item.id === "orders" || item.id === "deposits";
+                    }
+                    return true;
+                  }).map((item) => {
                     const Icon = item.icon;
                     const isActive = adminTab === item.id;
                     return (
@@ -1284,7 +1300,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
               <div className="border-t border-zinc-900 pt-4 text-center">
                 <p className="text-[9px] text-zinc-600 font-mono">
-                  LOGGED IN AS ADMIN
+                  {isSupportStaff ? "LOGGED IN AS SUPPORT" : "LOGGED IN AS ADMIN"}
                 </p>
                 <p className="text-[8px] text-zinc-500 truncate mt-0.5">
                   {currentUser?.email || "Local Override Access"}
