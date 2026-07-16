@@ -314,6 +314,15 @@ export default function App() {
   const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
   const isAdmin = currentUser?.email === "bnyshopadminpanel@gmail.com" || 
     dbTeamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
+  const isSupportStaff = currentUser?.email !== "bnyshopadminpanel@gmail.com" && 
+    dbTeamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
+
+  // Redirect support staff if on restricted views
+  useEffect(() => {
+    if (isSupportStaff && (activeSection === "wallet" || activeSection === "history" || activeSection === "profile")) {
+      setActiveSection("home");
+    }
+  }, [isSupportStaff, activeSection]);
 
   // PWA/Install Banner States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -1989,7 +1998,7 @@ export default function App() {
 
           {/* Bottom navigation bar */}
           <nav className="fixed bottom-0 left-0 right-0 max-w-3xl mx-auto bg-bg-navy/95 border-t border-zinc-900 px-4 py-2.5 flex justify-around items-center z-40 shadow-[0_-10px_30px_rgba(4,8,16,0.8)] backdrop-blur-md">
-            {activeSection !== "admin" && (
+            {(activeSection !== "admin" || isSupportStaff) && (
               <button
                 onClick={() => {
                   setSelectedPkg(null);
@@ -2007,7 +2016,7 @@ export default function App() {
               </button>
             )}
 
-            {activeSection !== "admin" && (
+            {activeSection !== "admin" && !isSupportStaff && (
               <button
                 onClick={() => setActiveSection("wallet")}
                 className={`flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 ${
@@ -2021,7 +2030,7 @@ export default function App() {
               </button>
             )}
 
-            {activeSection !== "admin" && (
+            {activeSection !== "admin" && !isSupportStaff && (
               <button
                 onClick={() => setActiveSection("history")}
                 className={`flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 ${
@@ -2035,20 +2044,22 @@ export default function App() {
               </button>
             )}
 
-            <button
-              onClick={() => {
-                setProfileActiveTab("menu");
-                setActiveSection("profile");
-              }}
-              className={`flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 ${
-                activeSection === "profile" 
-                  ? "text-red-500 font-extrabold filter drop-shadow-[0_0_8px_rgba(239,68,68,0.85)] scale-105" 
-                  : "text-zinc-600 hover:text-white"
-              }`}
-            >
-              <UserIcon className="w-5 h-5" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Profile</span>
-            </button>
+            {!isSupportStaff && (
+              <button
+                onClick={() => {
+                  setProfileActiveTab("menu");
+                  setActiveSection("profile");
+                }}
+                className={`flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 ${
+                  activeSection === "profile" 
+                    ? "text-red-500 font-extrabold filter drop-shadow-[0_0_8px_rgba(239,68,68,0.85)] scale-105" 
+                    : "text-zinc-600 hover:text-white"
+                }`}
+              >
+                <UserIcon className="w-5 h-5" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Profile</span>
+              </button>
+            )}
 
             {/* Render Admin Tab if User email matches CEO / Admin privileges */}
             {isAdmin && (

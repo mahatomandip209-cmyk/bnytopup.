@@ -1031,20 +1031,21 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
   // ---------------- TEAM MEMBERS CRUD ----------------
   const addTeamMember = async () => {
-    if (!newTeamName.trim()) {
-      alert("Please enter team member name.");
-      return;
-    }
     if (!newTeamEmail.trim()) {
       alert("Please enter team member email.");
       return;
     }
+    
+    const emailTrimmed = newTeamEmail.trim().toLowerCase();
+    const emailPrefix = emailTrimmed.split("@")[0];
+    const capitalizedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+
     const newMember = {
-      name: newTeamName.trim(),
-      email: newTeamEmail.trim().toLowerCase(),
-      role: newTeamRole,
-      phone: newTeamPhone.trim(),
-      status: newTeamStatus,
+      name: capitalizedName,
+      email: emailTrimmed,
+      role: "Support Staff",
+      phone: "",
+      status: "Active",
       createdAt: new Date().toISOString()
     };
     try {
@@ -1052,42 +1053,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
       const newKey = push(teamRef).key;
       if (newKey) {
         await set(ref(db, `team_members/${newKey}`), newMember);
-        setNewTeamName("");
         setNewTeamEmail("");
-        setNewTeamRole("Support Staff");
-        setNewTeamPhone("");
-        setNewTeamStatus("Active");
         alert("Team member added successfully!");
       }
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const updateTeamMember = async (id: string) => {
-    if (!editTeamName.trim()) {
-      alert("Please enter team member name.");
-      return;
-    }
-    if (!editTeamEmail.trim()) {
-      alert("Please enter team member email.");
-      return;
-    }
-    try {
-      await update(ref(db, `team_members/${id}`), {
-        name: editTeamName.trim(),
-        email: editTeamEmail.trim().toLowerCase(),
-        role: editTeamRole,
-        phone: editTeamPhone.trim(),
-        status: editTeamStatus
-      });
-      setEditingTeamId(null);
-      setEditTeamName("");
-      setEditTeamEmail("");
-      setEditTeamRole("Support Staff");
-      setEditTeamPhone("");
-      setEditTeamStatus("Active");
-      alert("Team member updated successfully!");
     } catch (err: any) {
       alert(err.message);
     }
@@ -3775,69 +3743,25 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
               </span>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mandip Mahato"
-                      value={newTeamName}
-                      onChange={(e) => setNewTeamName(e.target.value)}
-                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      placeholder="e.g. member@bnyshop.com"
-                      value={newTeamEmail}
-                      onChange={(e) => setNewTeamEmail(e.target.value)}
-                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
-                    />
-                  </div>
+                <div>
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. member@bnyshop.com"
+                    value={newTeamEmail}
+                    onChange={(e) => setNewTeamEmail(e.target.value)}
+                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
+                  />
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Assigned Role</label>
-                    <select
-                      value={newTeamRole}
-                      onChange={(e) => setNewTeamRole(e.target.value)}
-                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white text-xs focus:outline-none focus:border-red-500 font-sans"
-                    >
-                      <option value="Administrator">Administrator</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Moderator">Moderator</option>
-                      <option value="Support Staff">Support Staff</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Phone Number (Optional)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. +977-980000000"
-                        value={newTeamPhone}
-                        onChange={(e) => setNewTeamPhone(e.target.value)}
-                        className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-red-500 font-sans"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Status</label>
-                      <select
-                        value={newTeamStatus}
-                        onChange={(e) => setNewTeamStatus(e.target.value as "Active" | "Inactive")}
-                        className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-3 text-white text-xs focus:outline-none focus:border-red-500 font-sans"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
+                <div>
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Assigned Role</label>
+                  <input
+                    type="text"
+                    value="Support Staff"
+                    readOnly
+                    className="w-full bg-black/50 border border-zinc-900 rounded-xl px-3 py-3 text-zinc-400 text-xs focus:outline-none cursor-not-allowed font-sans font-bold"
+                  />
                 </div>
               </div>
 
@@ -3865,164 +3789,40 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
               ) : (
                 <div className="grid grid-cols-1 gap-3">
                   {teamMembers.map((member) => {
-                    const isEditing = editingTeamId === member.id;
-
                     return (
                       <div
                         key={member.id}
-                        className={`bg-black/30 border rounded-2xl p-4 transition-all ${
-                          isEditing ? "border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.05)]" : "border-zinc-900 hover:border-zinc-800"
-                        }`}
+                        className="bg-black/30 border border-zinc-900 hover:border-zinc-800 rounded-2xl p-4 transition-all"
                       >
-                        {isEditing ? (
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
-                              <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Editing Team Member</span>
-                              <button
-                                onClick={() => setEditingTeamId(null)}
-                                className="text-zinc-500 hover:text-white"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between animate-none">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-red-500 text-sm font-orbitron flex-shrink-0">
+                              {member.name ? member.name.charAt(0).toUpperCase() : "T"}
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-3 font-sans">
-                                <div>
-                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Full Name</label>
-                                  <input
-                                    type="text"
-                                    value={editTeamName}
-                                    onChange={(e) => setEditTeamName(e.target.value)}
-                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Email Address</label>
-                                  <input
-                                    type="email"
-                                    value={editTeamEmail}
-                                    onChange={(e) => setEditTeamEmail(e.target.value)}
-                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
-                                  />
-                                </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold text-white font-sans">{member.name}</span>
+                                <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[8px] text-zinc-400 font-bold uppercase tracking-wide font-sans">
+                                  {member.role}
+                                </span>
                               </div>
-
-                              <div className="space-y-3 font-sans">
-                                <div>
-                                  <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Assigned Role</label>
-                                  <select
-                                    value={editTeamRole}
-                                    onChange={(e) => setEditTeamRole(e.target.value)}
-                                    className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none"
-                                  >
-                                    <option value="Administrator">Administrator</option>
-                                    <option value="Manager">Manager</option>
-                                    <option value="Moderator">Moderator</option>
-                                    <option value="Support Staff">Support Staff</option>
-                                  </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Phone</label>
-                                    <input
-                                      type="text"
-                                      value={editTeamPhone}
-                                      onChange={(e) => setEditTeamPhone(e.target.value)}
-                                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white placeholder-zinc-700 text-xs focus:outline-none"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[10px] text-zinc-500 font-bold uppercase block mb-1">Status</label>
-                                    <select
-                                      value={editTeamStatus}
-                                      onChange={(e) => setEditTeamStatus(e.target.value as "Active" | "Inactive")}
-                                      className="w-full bg-black border border-zinc-900 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none"
-                                    >
-                                      <option value="Active">Active</option>
-                                      <option value="Inactive">Inactive</option>
-                                    </select>
-                                  </div>
-                                </div>
+                              <div className="text-[10px] text-zinc-400 truncate font-mono select-all animate-none" title={member.email}>
+                                <span className="text-zinc-600 font-bold mr-1">EMAIL:</span> {member.email}
                               </div>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2 border-t border-zinc-900">
-                              <button
-                                onClick={() => setEditingTeamId(null)}
-                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white px-4 py-2 rounded-xl font-bold cursor-pointer transition-colors"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => updateTeamMember(member.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-                              >
-                                <Save className="w-3.5 h-3.5" />
-                                <span>Save Changes</span>
-                              </button>
                             </div>
                           </div>
-                        ) : (
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between animate-none">
-                            <div className="flex items-start gap-3 min-w-0 flex-1">
-                              <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-red-500 text-sm font-orbitron flex-shrink-0">
-                                {member.name ? member.name.charAt(0).toUpperCase() : "T"}
-                              </div>
-                              <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-xs font-bold text-white font-sans">{member.name}</span>
-                                  <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[8px] text-zinc-400 font-bold uppercase tracking-wide font-sans">
-                                    {member.role}
-                                  </span>
-                                  <span className={`flex items-center gap-1 text-[8px] font-bold uppercase tracking-wide font-sans px-2 py-0.5 rounded ${
-                                    member.status === "Active" 
-                                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-500" 
-                                      : "bg-red-500/10 border border-red-500/20 text-red-500"
-                                  }`}>
-                                    <span className={`w-1 h-1 rounded-full ${member.status === "Active" ? "bg-emerald-500" : "bg-red-500"}`} />
-                                    {member.status}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-zinc-400 truncate font-mono select-all animate-none" title={member.email}>
-                                  <span className="text-zinc-600 font-bold mr-1">EMAIL:</span> {member.email}
-                                </div>
-                                {member.phone && (
-                                  <div className="text-[10px] text-zinc-500 truncate font-mono select-all animate-none" title={member.phone}>
-                                    <span className="text-zinc-600 font-bold mr-1">PHONE:</span> {member.phone}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
 
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-zinc-900 pt-3 sm:pt-0">
-                              <button
-                                onClick={() => {
-                                  setEditingTeamId(member.id);
-                                  setEditTeamName(member.name || "");
-                                  setEditTeamEmail(member.email || "");
-                                  setEditTeamRole(member.role || "Support Staff");
-                                  setEditTeamPhone(member.phone || "");
-                                  setEditTeamStatus(member.status || "Active");
-                                }}
-                                className="flex-1 sm:flex-initial p-2 bg-zinc-900/60 hover:bg-zinc-900 hover:text-white rounded-xl border border-zinc-800 text-zinc-400 transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
-                                title="Edit Team Member"
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-red-500" />
-                                <span>EDIT</span>
-                              </button>
-                              <button
-                                onClick={() => deleteTeamMember(member.id)}
-                                className="p-2 bg-red-950/10 hover:bg-red-950/30 border border-red-900/20 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
-                                title="Remove Team Member"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span className="sm:hidden">DELETE</span>
-                              </button>
-                            </div>
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-zinc-900 pt-3 sm:pt-0">
+                            <button
+                              onClick={() => deleteTeamMember(member.id)}
+                              className="p-2 bg-red-950/10 hover:bg-red-950/30 border border-red-900/20 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold"
+                              title="Remove Team Member"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="sm:hidden">DELETE</span>
+                            </button>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
