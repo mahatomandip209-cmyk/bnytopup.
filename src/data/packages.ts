@@ -21,20 +21,6 @@ export interface ServiceItem {
 
 export const servicesData: ServiceItem[] = [
   {
-    id: "ff_likebot",
-    name: "Free Fire Like Bot",
-    image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "ffbots",
-    description: "Boost your Free Fire profile likes instantly and safely",
-    fields: [
-      { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
-    ],
-    packages: [
-      { n: "30 Days — 6000 Likes", p: 649 },
-      { n: "60 Days — 12000 Likes", p: 1298 }
-    ]
-  },
-  {
     id: "ff_glorybot",
     name: "Free Fire Glory Bot",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",

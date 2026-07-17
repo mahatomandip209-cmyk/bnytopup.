@@ -185,17 +185,11 @@ export default function App() {
           list = data.map((game, idx) => {
             if (!game || !game.name) return null;
             let category = game.category;
-            let needsMigration = false;
             if (category === "subscription") {
               category = "subscriptions";
-              needsMigration = true;
             }
             if ((game.id === "ff_likebot" || game.id === "ff_glorybot") && category === "voucher") {
               category = "ffbots";
-              needsMigration = true;
-            }
-            if (needsMigration && game.id) {
-              update(ref(db, `games/${game.id}`), { category });
             }
             return {
               ...game,
@@ -209,17 +203,11 @@ export default function App() {
             const game = data[key];
             if (!game || !game.name) return null;
             let category = game.category;
-            let needsMigration = false;
             if (category === "subscription") {
               category = "subscriptions";
-              needsMigration = true;
             }
             if ((key === "ff_likebot" || key === "ff_glorybot" || game.id === "ff_likebot" || game.id === "ff_glorybot") && (category === "voucher" || category === "voucher_option" || !category)) {
               category = "ffbots";
-              needsMigration = true;
-            }
-            if (needsMigration && (game.id || key)) {
-              update(ref(db, `games/${game.id || key}`), { category });
             }
             return {
               ...game,
@@ -229,18 +217,16 @@ export default function App() {
             };
           }).filter(Boolean);
         }
-        // Force re-seed if the list contains games other than the core ffbots games (ff_likebot, ff_glorybot)
-        const hasExtraneousGames = list.some(g => g.id !== "ff_likebot" && g.id !== "ff_glorybot");
-        if (hasExtraneousGames) {
-          remove(ref(db, "games"));
-          set(gamesRef, servicesData);
-          list = servicesData;
+
+        // Client-side cleanup of ff_likebot if it exists in DB
+        const hasLikeBot = list.some(g => g.id === "ff_likebot");
+        if (hasLikeBot) {
+          remove(ref(db, "games/ff_likebot"));
         }
 
-        setDbServices(list);
+        const filteredList = list.filter(g => g.id !== "ff_likebot");
+        setDbServices(filteredList);
       } else {
-        // Seed default games
-        set(gamesRef, servicesData);
         setDbServices(servicesData);
       }
       setServicesLoading(false);
@@ -249,6 +235,13 @@ export default function App() {
     const categoriesRef = ref(db, "categories");
     const unsubscribeCategories = onValue(categoriesRef, (snapshot) => {
       const data = snapshot.val();
+      const defaultCats = [
+        { id: "ffbots", name: "FF BOTS" },
+        { id: "topup", name: "TOPUP" },
+        { id: "voucher", name: "VOUCHER" },
+        { id: "subscriptions", name: "SUBSCRIPTIONS" }
+      ];
+
       if (data) {
         let list: any[] = [];
         if (Array.isArray(data)) {
@@ -282,28 +275,22 @@ export default function App() {
           }).filter(Boolean);
         }
 
-        // Run self-healing database migration/overwrite of categories:
-        // If the loaded list contains "subscription" or "subscription_option", or does not contain "ffbots", rewrite!
-        const hasOld = list.some(c => c.id === "subscription" || c.id === "subscription_option");
-        const hasNew = list.some(c => c.id === "ffbots");
-        if (hasOld || !hasNew) {
-          const defaultCats = [
-            { id: "ffbots", name: "FF BOTS" },
-            { id: "topup", name: "TOPUP" },
-            { id: "voucher", name: "VOUCHER" },
-            { id: "subscriptions", name: "SUBSCRIPTIONS" }
-          ];
-          remove(ref(db, "categories/subscription"));
-          remove(ref(db, "categories/subscription_option"));
-          remove(ref(db, "categories/voucher_option"));
-          remove(ref(db, "categories/topup_option"));
+        // Filter categories so "subscription" gets replaced by "subscriptions" client-side
+        list = list.map(c => {
+          if (c.id === "subscription" || c.id === "subscription_option") {
+            return { id: "subscriptions", name: "SUBSCRIPTIONS" };
+          }
+          return c;
+        });
 
-          set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
-          set(ref(db, "categories/topup"), { name: "TOPUP" });
-          set(ref(db, "categories/voucher"), { name: "VOUCHER" });
-          set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
-          list = defaultCats;
-        }
+        // Ensure we always have ffbots, topup, voucher, subscriptions
+        const requiredIds = ["ffbots", "topup", "voucher", "subscriptions"];
+        requiredIds.forEach(id => {
+          if (!list.some(c => c.id === id)) {
+            const defCat = defaultCats.find(c => c.id === id);
+            if (defCat) list.push(defCat);
+          }
+        });
 
         setDbCategories(list);
         if (!isCategoryInitialized && list.length > 0) {
@@ -311,16 +298,6 @@ export default function App() {
           setIsCategoryInitialized(true);
         }
       } else {
-        const defaultCats = [
-          { id: "ffbots", name: "FF BOTS" },
-          { id: "topup", name: "TOPUP" },
-          { id: "voucher", name: "VOUCHER" },
-          { id: "subscriptions", name: "SUBSCRIPTIONS" }
-        ];
-        set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
-        set(ref(db, "categories/topup"), { name: "TOPUP" });
-        set(ref(db, "categories/voucher"), { name: "VOUCHER" });
-        set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
         setDbCategories(defaultCats);
         if (!isCategoryInitialized) {
           setSelectedCategory("ffbots");
@@ -338,8 +315,7 @@ export default function App() {
           esewaNum: data.esewaNum || "9825880400"
         });
       } else {
-        // Seed default payment coordinates
-        set(paymentRef, {
+        setPaymentSettings({
           qrCode: "https://i.ibb.co/8nFCFgqw/WA-1772424062040.jpg",
           esewaNum: "9825880400"
         });
@@ -1611,6 +1587,21 @@ export default function App() {
             </div>
           </header>
 
+          {quotaExceeded && (
+            <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-5 py-2.5 flex items-center justify-between gap-3 text-xs text-yellow-500 animate-fade-in font-sans">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span>Real-time Cloud syncing is temporarily paused. High-speed local cache mode is active — your transactions and order history remain fully secure.</span>
+              </div>
+              <button 
+                onClick={() => setQuotaExceeded(false)}
+                className="text-yellow-500 hover:text-yellow-400 font-bold px-2 py-1 border border-yellow-500/20 rounded hover:bg-yellow-500/5 transition-all text-[10px] uppercase cursor-pointer shrink-0"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
 
           {/* Dynamic home slider only shows in home section */}
           {activeSection === "home" && (
@@ -1697,7 +1688,7 @@ export default function App() {
                         ></div>
                       ))
                     ) : (
-                      dbCategories.map((cat) => {
+                      dbCategories.filter(cat => dbServices.some(g => g.category === cat.id)).map((cat) => {
                         const isActive = selectedCategory === cat.id;
                         return (
                           <button
