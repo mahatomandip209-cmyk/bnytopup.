@@ -286,29 +286,43 @@ export default function HistorySection({
                   ) : (
                     /* Show Order Requirements for custom categories, or if pending/rejected */
                     (() => {
-                      const standardKeys = [
-                        "orderId",
-                        "userOrderId",
-                        "userId",
-                        "uid",
-                        "uniqueId",
-                        "userName",
-                        "userEmail",
-                        "email",
-                        "game",
-                        "gameId",
-                        "packageName",
-                        "price",
-                        "quantity",
-                        "status",
-                        "timestamp",
-                        "voucher_codes",
-                        "id",
-                        "category"
-                      ];
-                      const customFields = Object.entries(order).filter(
-                        ([key]) => !standardKeys.includes(key) && !key.toLowerCase().includes("email")
-                      );
+                      let customFields: [string, any][] = [];
+                      if (order.submitted_requirements && typeof order.submitted_requirements === "object") {
+                        customFields = Object.entries(order.submitted_requirements);
+                      } else {
+                        // Fallback for legacy orders
+                        const standardKeys = [
+                          "orderId",
+                          "userOrderId",
+                          "userId",
+                          "uid",
+                          "uniqueId",
+                          "userName",
+                          "userEmail",
+                          "email",
+                          "game",
+                          "gameId",
+                          "packageName",
+                          "price",
+                          "quantity",
+                          "status",
+                          "timestamp",
+                          "voucher_codes",
+                          "id",
+                          "category",
+                          "submitted_requirements"
+                        ];
+                        customFields = Object.entries(order)
+                          .filter(([key]) => !standardKeys.includes(key) && !key.toLowerCase().includes("email"))
+                          .map(([key, val]) => {
+                            const formattedKey = key
+                              .replace(/([A-Z])/g, ' $1')
+                              .replace(/[_-]/g, ' ')
+                              .trim()
+                              .replace(/^\w/, (c) => c.toUpperCase());
+                            return [formattedKey, val];
+                          });
+                      }
 
                       if (customFields.length === 0) return null;
 
@@ -318,29 +332,23 @@ export default function HistorySection({
                             📝 Submitted Information
                           </span>
                           <div className="grid grid-cols-1 gap-2">
-                            {customFields.map(([key, val]: [string, any]) => {
-                              const formattedKey = key
-                                .replace(/([A-Z])/g, ' $1')
-                                .replace(/[_-]/g, ' ')
-                                .trim()
-                                .replace(/^\w/, (c) => c.toUpperCase());
-
+                            {customFields.map(([label, val]: [string, any]) => {
                               const displayVal = typeof val === "object" ? JSON.stringify(val) : String(val);
 
                               return (
-                                <div key={key} className="bg-white border border-zinc-200/60 p-2.5 px-3.5 rounded-xl font-mono text-xs flex justify-between items-center gap-4 shadow-sm">
+                                <div key={label} className="bg-white border border-zinc-200/60 p-2.5 px-3.5 rounded-xl font-mono text-xs flex justify-between items-center gap-4 shadow-sm">
                                   <div className="space-y-0.5 min-w-0 flex-1">
-                                    <span className="text-[9px] text-zinc-400 block uppercase font-bold">{formattedKey}</span>
+                                    <span className="text-[9px] text-zinc-400 block uppercase font-bold">{label}</span>
                                     <span className="text-zinc-950 font-extrabold tracking-wide break-all">{displayVal}</span>
                                   </div>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigator.clipboard.writeText(displayVal);
-                                      alert(`${formattedKey} copied: ${displayVal}`);
+                                      alert(`${label} copied: ${displayVal}`);
                                     }}
                                     className="text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer p-1.5 hover:bg-zinc-100 rounded-lg shrink-0"
-                                    title={`Copy ${formattedKey}`}
+                                    title={`Copy ${label}`}
                                   >
                                     <Copy className="w-3.5 h-3.5" />
                                   </button>

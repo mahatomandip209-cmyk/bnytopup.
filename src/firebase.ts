@@ -61,7 +61,10 @@ export function onValue(refObj: any, callback: (snapshot: any) => void, cancelCa
     return onSnapshot(
       docRef,
       (docSnap) => {
-        const valData = docSnap.exists() ? docSnap.data() : null;
+        let valData = docSnap.exists() ? docSnap.data() : null;
+        if (collName === "banners" && valData && valData.list) {
+          valData = valData.list;
+        }
         callback({
           val: () => valData,
           exists: () => docSnap.exists()
@@ -107,7 +110,10 @@ export async function get(refObj: any) {
     }
     const docRef = doc(firestore, collName, docId);
     const docSnap = await getDoc(docRef);
-    const valData = docSnap.exists() ? docSnap.data() : null;
+    let valData = docSnap.exists() ? docSnap.data() : null;
+    if (collName === "banners" && valData && valData.list) {
+      valData = valData.list;
+    }
     return {
       val: () => valData,
       exists: () => docSnap.exists()
@@ -144,7 +150,11 @@ export async function set(refObj: any, data: any) {
       docId = parts.slice(1).join("_");
     }
     const docRef = doc(firestore, collName, docId);
-    await setDoc(docRef, data);
+    let finalData = data;
+    if (collName === "banners" && Array.isArray(data)) {
+      finalData = { list: data };
+    }
+    await setDoc(docRef, finalData);
   } else {
     throw new Error(`Cannot set a whole collection: ${collName}`);
   }
@@ -180,7 +190,11 @@ export async function update(refObj: any, data: any) {
       docId = parts.slice(1).join("_");
     }
     const docRef = doc(firestore, collName, docId);
-    await setDoc(docRef, data, { merge: true });
+    let finalData = data;
+    if (collName === "banners" && Array.isArray(data)) {
+      finalData = { list: data };
+    }
+    await setDoc(docRef, finalData, { merge: true });
   } else {
     throw new Error(`Cannot update a whole collection: ${collName}`);
   }

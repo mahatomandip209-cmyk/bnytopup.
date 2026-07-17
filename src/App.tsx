@@ -981,8 +981,8 @@ export default function App() {
       finalPriceNPR = basePrice * quantity;
       finalPackageName = quantity > 1 ? `${selectedPkg.n} (Qty: ${quantity})` : selectedPkg.n;
 
-      // Validate dynamic fields based on configurations
-      const fieldsToValidate = activeService.fields || [];
+      // Validate dynamic fields based on configurations (skip validation for voucher games)
+      const fieldsToValidate = isVoucher ? [] : (activeService.fields || []);
 
       for (const f of fieldsToValidate) {
         if (!fieldsState[f.key]) {
@@ -1000,6 +1000,24 @@ export default function App() {
         message: `Insufficient Balance! Please deposit ${convertAndFormatPrice(missing)} first.`,
       });
       return;
+    }
+
+    // Build human-readable submitted requirements
+    const submitted_requirements: Record<string, string> = {};
+    if (!isVoucher) {
+      const fieldsToValidate = activeService.fields || [];
+      fieldsToValidate.forEach((f: any) => {
+        if (fieldsState[f.key]) {
+          submitted_requirements[f.label || f.key] = fieldsState[f.key];
+        }
+      });
+      if (activeService.id === "usdt") {
+        if (fieldsState.walletAddress) submitted_requirements["Wallet Address"] = fieldsState.walletAddress;
+        if (fieldsState.network) submitted_requirements["Network"] = fieldsState.network;
+        if (fieldsState.whatsappNumber) submitted_requirements["WhatsApp Number"] = fieldsState.whatsappNumber;
+        if (fieldsState.cryptoAmount) submitted_requirements["Crypto Amount"] = fieldsState.cryptoAmount;
+        if (fieldsState.txType) submitted_requirements["Transaction Type"] = fieldsState.txType;
+      }
     }
 
     // Fetch and assign voucher codes first if it's a voucher game
@@ -1092,6 +1110,7 @@ export default function App() {
         quantity: activeService.id === "usdt" ? 1 : quantity,
         status: isVoucher ? "approved" : "pending",
         timestamp: Date.now(),
+        submitted_requirements,
         ...fieldsState,
         ...(isVoucher ? { voucher_codes: assignedVouchers.map(v => v.code) } : {})
       };
@@ -1936,11 +1955,6 @@ export default function App() {
                       <div className="space-y-4 text-xs font-mono">
                         {isVoucher ? (
                           <div className="space-y-3">
-                            <div className="p-4 bg-zinc-950/45 border border-zinc-900/80 rounded-2xl text-center space-y-1">
-                              <span className="text-emerald-500 font-orbitron font-extrabold tracking-wider uppercase text-[10px] block">⚡ Instant Delivery Voucher</span>
-                              <p className="text-[11px] text-zinc-400">No ID/UID required. The voucher code will be loaded instantly to your account!</p>
-                            </div>
-
                             <div className="p-4 bg-black/30 border border-zinc-900/70 rounded-2xl flex items-center justify-between">
                               <span className="text-[10px] uppercase font-bold text-zinc-400">Voucher Stock Status</span>
                               <span className={`font-orbitron font-black text-[11px] px-2.5 py-1 rounded-lg tracking-wider uppercase ${

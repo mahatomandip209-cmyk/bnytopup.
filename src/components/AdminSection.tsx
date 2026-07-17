@@ -1647,133 +1647,165 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
                       {/* Order Requirements details block */}
                       <div className="bg-black/20 border border-zinc-900/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono text-zinc-400">
-                        {/* Standard UID / credentials fields */}
-                        {order.playerUid && (
-                          <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                            <div className="min-w-0">
-                              <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Player UID</span>
-                              <strong className="text-red-500 text-xs tracking-wider select-all block truncate">{order.playerUid}</strong>
-                            </div>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(order.playerUid);
-                                alert(`Copied Player UID: ${order.playerUid}`);
-                              }}
-                              className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                              title="Copy Player UID"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                        {order.customerEmail && (
-                          <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                            <div className="min-w-0">
-                              <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Customer Game Email</span>
-                              <strong className="text-white text-xs select-all block truncate">{order.customerEmail}</strong>
-                            </div>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(order.customerEmail);
-                                alert(`Copied Customer Game Email: ${order.customerEmail}`);
-                              }}
-                              className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                              title="Copy Customer Game Email"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                        {order.customerPassword && (
-                          <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                            <div className="min-w-0">
-                              <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Activation Password</span>
-                              <strong className="text-white text-xs select-all block truncate">{order.customerPassword}</strong>
-                            </div>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(order.customerPassword);
-                                alert(`Copied Activation Password: ${order.customerPassword}`);
-                              }}
-                              className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                              title="Copy Activation Password"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                        {order.whatsappNumber && (
-                          <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                            <div className="min-w-0">
-                              <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Contact WhatsApp</span>
-                              <strong className="text-white text-xs select-all block truncate">{order.whatsappNumber}</strong>
-                            </div>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(order.whatsappNumber);
-                                alert(`Copied Contact WhatsApp: ${order.whatsappNumber}`);
-                              }}
-                              className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                              title="Copy Contact WhatsApp"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Render all other dynamic requirement keys */}
-                        {Object.keys(order)
-                          .filter(
-                            (key) =>
-                              ![
-                                "orderId",
-                                "userOrderId",
-                                "uid",
-                                "email",
-                                "uniqueId",
-                                "game",
-                                "packageName",
-                                "price",
-                                "quantity",
-                                "status",
-                                "timestamp",
-                                "voucher_codes",
-                                "playerUid",
-                                "customerEmail",
-                                "customerPassword",
-                                "whatsappNumber",
-                              ].includes(key)
-                          )
-                          .map((key) => {
-                            const val = order[key];
+                        {order.submitted_requirements && typeof order.submitted_requirements === "object" ? (
+                          Object.entries(order.submitted_requirements).map(([label, val]: [string, any]) => {
                             if (val === undefined || val === null || val === "") return null;
-                            const displayKey = key
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (char) => char.toUpperCase());
-                            const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+                            const displayVal = typeof val === "object" ? JSON.stringify(val) : String(val);
                             return (
-                              <div key={key} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                              <div key={label} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
                                 <div className="min-w-0">
                                   <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
-                                    {displayKey}
+                                    {label}
                                   </span>
                                   <strong className="text-white text-xs select-all block truncate">
-                                    {strVal}
+                                    {displayVal}
                                   </strong>
                                 </div>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(strVal);
-                                    alert(`Copied ${displayKey}: ${strVal}`);
+                                    navigator.clipboard.writeText(displayVal);
+                                    alert(`Copied ${label}: ${displayVal}`);
                                   }}
                                   className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title={`Copy ${displayKey}`}
+                                  title={`Copy ${label}`}
                                 >
                                   <Copy className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             );
-                          })}
+                          })
+                        ) : (
+                          <>
+                            {/* Standard UID / credentials fields */}
+                            {order.playerUid && (
+                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                                <div className="min-w-0">
+                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Player UID</span>
+                                  <strong className="text-red-500 text-xs tracking-wider select-all block truncate">{order.playerUid}</strong>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.playerUid);
+                                    alert(`Copied Player UID: ${order.playerUid}`);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                  title="Copy Player UID"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            {order.customerEmail && (
+                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                                <div className="min-w-0">
+                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Customer Game Email</span>
+                                  <strong className="text-white text-xs select-all block truncate">{order.customerEmail}</strong>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.customerEmail);
+                                    alert(`Copied Customer Game Email: ${order.customerEmail}`);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                  title="Copy Customer Game Email"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            {order.customerPassword && (
+                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                                <div className="min-w-0">
+                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Activation Password</span>
+                                  <strong className="text-white text-xs select-all block truncate">{order.customerPassword}</strong>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.customerPassword);
+                                    alert(`Copied Activation Password: ${order.customerPassword}`);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                  title="Copy Activation Password"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            {order.whatsappNumber && (
+                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                                <div className="min-w-0">
+                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Contact WhatsApp</span>
+                                  <strong className="text-white text-xs select-all block truncate">{order.whatsappNumber}</strong>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.whatsappNumber);
+                                    alert(`Copied Contact WhatsApp: ${order.whatsappNumber}`);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                  title="Copy Contact WhatsApp"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Render all other dynamic requirement keys */}
+                            {Object.keys(order)
+                              .filter(
+                                (key) =>
+                                  ![
+                                    "orderId",
+                                    "userOrderId",
+                                    "uid",
+                                    "email",
+                                    "uniqueId",
+                                    "game",
+                                    "packageName",
+                                    "price",
+                                    "quantity",
+                                    "status",
+                                    "timestamp",
+                                    "voucher_codes",
+                                    "playerUid",
+                                    "customerEmail",
+                                    "customerPassword",
+                                    "whatsappNumber",
+                                    "submitted_requirements",
+                                  ].includes(key)
+                              )
+                              .map((key) => {
+                                const val = order[key];
+                                if (val === undefined || val === null || val === "") return null;
+                                const displayKey = key
+                                  .replace(/_/g, " ")
+                                  .replace(/\b\w/g, (char) => char.toUpperCase());
+                                const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+                                return (
+                                  <div key={key} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                                    <div className="min-w-0">
+                                      <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
+                                        {displayKey}
+                                      </span>
+                                      <strong className="text-white text-xs select-all block truncate">
+                                        {strVal}
+                                      </strong>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(strVal);
+                                        alert(`Copied ${displayKey}: ${strVal}`);
+                                      }}
+                                      className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                      title={`Copy ${displayKey}`}
+                                    >
+                                      <Copy className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                          </>
+                        )}
                       </div>
 
                       {/* Voucher Codes Section */}
