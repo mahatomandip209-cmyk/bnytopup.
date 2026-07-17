@@ -372,10 +372,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
           }).filter(Boolean);
         }
 
-        // Check if we need to force re-seed the new games list (Freefire, Canva, Netflix, Spotify, Unipin)
-        const hasNetflix = list.some(g => g.id === "netflix" || g.name === "Netflix");
-        const hasPubg = list.some(g => g.id === "pubg_uc" || g.name === "PUBG UC" || g.id === "ff_topup" || g.id === "ff_levelup");
-        if (!hasNetflix || hasPubg) {
+        // Force re-seed if the list contains games other than the core ffbots games (ff_likebot, ff_glorybot)
+        const hasExtraneousGames = list.some(g => g.id !== "ff_likebot" && g.id !== "ff_glorybot");
+        if (hasExtraneousGames) {
           remove(ref(db, "games"));
           set(gamesRef, servicesData);
           list = servicesData;
