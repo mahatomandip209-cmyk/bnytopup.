@@ -456,19 +456,43 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
             return { id: k, name: k };
           }).filter(Boolean);
         }
+
+        // Run self-healing database migration/overwrite of categories:
+        // If the loaded list contains "subscription" or "subscription_option", or does not contain "ffbots", rewrite!
+        const hasOld = list.some(c => c.id === "subscription" || c.id === "subscription_option");
+        const hasNew = list.some(c => c.id === "ffbots");
+        if (hasOld || !hasNew) {
+          const defaultCats = [
+            { id: "ffbots", name: "FF BOTS" },
+            { id: "topup", name: "TOPUP" },
+            { id: "voucher", name: "VOUCHER" },
+            { id: "subscriptions", name: "SUBSCRIPTIONS" }
+          ];
+          remove(ref(db, "categories/subscription"));
+          remove(ref(db, "categories/subscription_option"));
+          remove(ref(db, "categories/voucher_option"));
+          remove(ref(db, "categories/topup_option"));
+
+          set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
+          set(ref(db, "categories/topup"), { name: "TOPUP" });
+          set(ref(db, "categories/voucher"), { name: "VOUCHER" });
+          set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
+          list = defaultCats;
+        }
+
         setDbCategories(list);
       } else {
-        const defaultCats: Record<string, { name: string }> = {
-          topup: { name: "Direct Top-up" },
-          voucher: { name: "Voucher Code" },
-          subscription: { name: "Premium Subscription" }
-        };
-        set(categoriesRef, defaultCats);
-        setDbCategories([
-          { id: "topup", name: "Direct Top-up" },
-          { id: "voucher", name: "Voucher Code" },
-          { id: "subscription", name: "Premium Subscription" }
-        ]);
+        const defaultCats = [
+          { id: "ffbots", name: "FF BOTS" },
+          { id: "topup", name: "TOPUP" },
+          { id: "voucher", name: "VOUCHER" },
+          { id: "subscriptions", name: "SUBSCRIPTIONS" }
+        ];
+        set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
+        set(ref(db, "categories/topup"), { name: "TOPUP" });
+        set(ref(db, "categories/voucher"), { name: "VOUCHER" });
+        set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
+        setDbCategories(defaultCats);
       }
     });
 

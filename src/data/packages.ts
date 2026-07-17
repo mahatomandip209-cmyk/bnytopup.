@@ -7,7 +7,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   image: string;
-  category: "topup" | "voucher" | "subscription";
+  category: "ffbots" | "topup" | "voucher" | "subscriptions";
   description: string;
   fields: {
     label: string;
@@ -71,7 +71,7 @@ export const servicesData: ServiceItem[] = [
     id: "ff_membership",
     name: "Free Fire Membership",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "subscription",
+    category: "subscriptions",
     description: "Weekly & Monthly premium Free Fire subscription loaded via Player UID",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
@@ -86,7 +86,7 @@ export const servicesData: ServiceItem[] = [
     id: "ff_likebot",
     name: "Free Fire Like Bot",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "voucher",
+    category: "ffbots",
     description: "Boost your Free Fire profile likes instantly and safely",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
@@ -101,7 +101,7 @@ export const servicesData: ServiceItem[] = [
     id: "ff_glorybot",
     name: "Free Fire Glory Bot",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "voucher",
+    category: "ffbots",
     description: "Level up your Guild Glory with our dedicated Squad Glory Bots",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }

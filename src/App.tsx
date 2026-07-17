@@ -113,11 +113,12 @@ export default function App() {
 
   // Category selection state
   const [dbCategories, setDbCategories] = useState<any[]>([
-    { id: "topup", name: "Direct Top-up" },
-    { id: "voucher", name: "Voucher Code" },
-    { id: "subscription", name: "Premium Subscription" }
+    { id: "ffbots", name: "FF BOTS" },
+    { id: "topup", name: "TOPUP" },
+    { id: "voucher", name: "VOUCHER" },
+    { id: "subscriptions", name: "SUBSCRIPTIONS" }
   ]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(dbCategories[0]?.id || "topup");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ffbots");
   const [isCategoryInitialized, setIsCategoryInitialized] = useState<boolean>(false);
 
   // Active service selection (one of the 10 services)
@@ -183,9 +184,23 @@ export default function App() {
         if (Array.isArray(data)) {
           list = data.map((game, idx) => {
             if (!game || !game.name) return null;
+            let category = game.category;
+            let needsMigration = false;
+            if (category === "subscription") {
+              category = "subscriptions";
+              needsMigration = true;
+            }
+            if ((game.id === "ff_likebot" || game.id === "ff_glorybot") && category === "voucher") {
+              category = "ffbots";
+              needsMigration = true;
+            }
+            if (needsMigration && game.id) {
+              update(ref(db, `games/${game.id}`), { category });
+            }
             return {
               ...game,
               id: game.id || String(idx),
+              category,
               packages: game.packages ? (Array.isArray(game.packages) ? game.packages : Object.values(game.packages)) : []
             };
           }).filter(Boolean);
@@ -193,9 +208,23 @@ export default function App() {
           list = Object.keys(data).map(key => {
             const game = data[key];
             if (!game || !game.name) return null;
+            let category = game.category;
+            let needsMigration = false;
+            if (category === "subscription") {
+              category = "subscriptions";
+              needsMigration = true;
+            }
+            if ((key === "ff_likebot" || key === "ff_glorybot" || game.id === "ff_likebot" || game.id === "ff_glorybot") && (category === "voucher" || category === "voucher_option" || !category)) {
+              category = "ffbots";
+              needsMigration = true;
+            }
+            if (needsMigration && (game.id || key)) {
+              update(ref(db, `games/${game.id || key}`), { category });
+            }
             return {
               ...game,
               id: game.id || key,
+              category,
               packages: game.packages ? (Array.isArray(game.packages) ? game.packages : Object.values(game.packages)) : []
             };
           }).filter(Boolean);
@@ -244,6 +273,30 @@ export default function App() {
             return { id: k, name: k };
           }).filter(Boolean);
         }
+
+        // Run self-healing database migration/overwrite of categories:
+        // If the loaded list contains "subscription" or "subscription_option", or does not contain "ffbots", rewrite!
+        const hasOld = list.some(c => c.id === "subscription" || c.id === "subscription_option");
+        const hasNew = list.some(c => c.id === "ffbots");
+        if (hasOld || !hasNew) {
+          const defaultCats = [
+            { id: "ffbots", name: "FF BOTS" },
+            { id: "topup", name: "TOPUP" },
+            { id: "voucher", name: "VOUCHER" },
+            { id: "subscriptions", name: "SUBSCRIPTIONS" }
+          ];
+          remove(ref(db, "categories/subscription"));
+          remove(ref(db, "categories/subscription_option"));
+          remove(ref(db, "categories/voucher_option"));
+          remove(ref(db, "categories/topup_option"));
+
+          set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
+          set(ref(db, "categories/topup"), { name: "TOPUP" });
+          set(ref(db, "categories/voucher"), { name: "VOUCHER" });
+          set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
+          list = defaultCats;
+        }
+
         setDbCategories(list);
         if (!isCategoryInitialized && list.length > 0) {
           setSelectedCategory(list[0].id);
@@ -251,14 +304,18 @@ export default function App() {
         }
       } else {
         const defaultCats = [
-          { id: "topup", name: "Direct Top-up" },
-          { id: "voucher", name: "Voucher Code" },
-          { id: "subscription", name: "Premium Subscription" }
+          { id: "ffbots", name: "FF BOTS" },
+          { id: "topup", name: "TOPUP" },
+          { id: "voucher", name: "VOUCHER" },
+          { id: "subscriptions", name: "SUBSCRIPTIONS" }
         ];
-        set(categoriesRef, defaultCats);
+        set(ref(db, "categories/ffbots"), { name: "FF BOTS" });
+        set(ref(db, "categories/topup"), { name: "TOPUP" });
+        set(ref(db, "categories/voucher"), { name: "VOUCHER" });
+        set(ref(db, "categories/subscriptions"), { name: "SUBSCRIPTIONS" });
         setDbCategories(defaultCats);
         if (!isCategoryInitialized) {
-          setSelectedCategory("topup");
+          setSelectedCategory("ffbots");
           setIsCategoryInitialized(true);
         }
       }
@@ -444,7 +501,7 @@ export default function App() {
     if (typeof window !== "undefined" && (window.location.pathname === "/admin" || window.location.pathname.endsWith("/admin") || window.location.href.includes("/admin"))) {
       setActiveSection("admin");
     }
-    setSelectedCategory(dbCategories[0]?.id || "topup");
+    setSelectedCategory(dbCategories[0]?.id || "ffbots");
   }, []);
 
   // Set up custom glowing alert and confirm dialogue overrides
@@ -2378,7 +2435,7 @@ export default function App() {
                     setVoucherSuccessModal(null);
                     setSelectedPkg(null);
                     setFieldsState({});
-                    setSelectedCategory(dbCategories[0]?.id || "topup");
+                    setSelectedCategory(dbCategories[0]?.id || "ffbots");
                     setActiveSection("home");
                     window.location.reload();
                   }}
