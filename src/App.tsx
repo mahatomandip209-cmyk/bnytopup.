@@ -68,6 +68,7 @@ export default function App() {
   const [authInitializing, setAuthInitializing] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<(UserData & { avatarId?: string; phone?: string; country?: string; referralCode?: string }) | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
 
   // Active section configuration
   const [activeSection, setActiveSection] = useState<"home" | "wallet" | "history" | "profile" | "topup" | "admin">("home");
@@ -155,6 +156,17 @@ export default function App() {
     }
   }, [dbServices]);
 
+  // Handle global Firestore quota limit gracefully
+  useEffect(() => {
+    const handleQuotaExceeded = () => {
+      setQuotaExceeded(true);
+    };
+    window.addEventListener("firebase-quota-exceeded", handleQuotaExceeded);
+    return () => {
+      window.removeEventListener("firebase-quota-exceeded", handleQuotaExceeded);
+    };
+  }, []);
+
   // Dynamic DB-loaded payment settings
   const [paymentSettings, setPaymentSettings] = useState({
     qrCode: "https://i.ibb.co/8nFCFgqw/WA-1772424062040.jpg",
@@ -235,6 +247,18 @@ export default function App() {
         setDbCategories(list);
         if (!isCategoryInitialized && list.length > 0) {
           setSelectedCategory(list[0].id);
+          setIsCategoryInitialized(true);
+        }
+      } else {
+        const defaultCats = [
+          { id: "topup", name: "Direct Top-up" },
+          { id: "voucher", name: "Voucher Code" },
+          { id: "subscription", name: "Premium Subscription" }
+        ];
+        set(categoriesRef, defaultCats);
+        setDbCategories(defaultCats);
+        if (!isCategoryInitialized) {
+          setSelectedCategory("topup");
           setIsCategoryInitialized(true);
         }
       }
@@ -587,7 +611,12 @@ export default function App() {
       } else if (val) {
         setDbBanners(Object.values(val));
       } else {
-        setDbBanners([]);
+        const defaultBanners = [
+          "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
+          "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
+        ];
+        set(bannersRef, defaultBanners);
+        setDbBanners(defaultBanners);
       }
     });
 
@@ -1516,6 +1545,7 @@ export default function App() {
               </div>
             </div>
           </header>
+
 
           {/* Dynamic home slider only shows in home section */}
           {activeSection === "home" && (
