@@ -1626,6 +1626,16 @@ export default function App() {
                       />
                     </div>
 
+                    {/* Remarks and Policy Info */}
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 w-full max-w-xs text-center space-y-1">
+                      <p className="text-[11px] font-black text-red-500 tracking-wider font-mono">
+                        REMARKS: BILL PAYMENTS
+                      </p>
+                      <p className="text-[11px] font-black text-red-500 tracking-wider font-mono">
+                        NO THRID PARTY
+                      </p>
+                    </div>
+
                     <div className="text-center space-y-1.5 font-mono w-full max-w-xs">
                       <p className="text-zinc-400 text-[10px] uppercase tracking-wider font-extrabold">
                         Account Coordinates
