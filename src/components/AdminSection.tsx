@@ -197,9 +197,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   // Helper to determine if a game/service is a Voucher-category game
   const isVoucherGame = (g: any) => {
     if (!g) return false;
-    const catId = (g.category || "").toLowerCase();
-    const catObj = dbCategories.find(c => c.id === g.category);
-    const catName = catObj ? (catObj.name || "").toLowerCase() : "";
+    const catId = String(g.category || "").toLowerCase();
+    const catObj = dbCategories.find(c => String(c.id).toLowerCase() === catId);
+    const catName = catObj ? String(catObj.name || "").toLowerCase() : "";
     
     // Explicitly exclude other categories to avoid false positives
     if (catId === "topup" || catId.includes("topup") || catName.includes("topup") || catName.includes("direct")) {
