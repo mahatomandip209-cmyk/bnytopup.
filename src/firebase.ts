@@ -100,16 +100,131 @@ export function getFirestoreRef(path: string): DocumentReference | CollectionRef
   }
 }
 
+const activeListeners = new Map<string, Set<(snapshot: any) => void>>();
+
+function triggerLocalUpdate(path: string, valData: any) {
+  const parts = path.split("/").filter(Boolean);
+  const cacheKey = `rtdb_cache:${path}`;
+  
+  // 1. Save to localStorage
+  try {
+    if (valData === null || valData === undefined) {
+      localStorage.removeItem(cacheKey);
+    } else {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        valData,
+        exists: true
+      }));
+    }
+  } catch (e) {
+    console.warn("Failed to set local cache on triggerLocalUpdate:", e);
+  }
+
+  // 2. Trigger the active listener callbacks for this specific path
+  const listeners = activeListeners.get(path);
+  if (listeners) {
+    listeners.forEach(cb => {
+      try {
+        cb({
+          val: () => valData,
+          exists: () => valData !== null && valData !== undefined,
+          key: parts[parts.length - 1] || ""
+        });
+      } catch (e) {
+        console.error("Error triggering local listener:", e);
+      }
+    });
+  }
+
+  // 3. Update the parent collection's cache if this is a document write!
+  if (parts.length > 1) {
+    const parentPath = parts.slice(0, parts.length - 1).join("/");
+    const childId = parts[parts.length - 1];
+    const parentCacheKey = `rtdb_cache:${parentPath}`;
+    
+    try {
+      const cachedStr = localStorage.getItem(parentCacheKey);
+      let parentData: any = null;
+      if (cachedStr) {
+        try {
+          parentData = JSON.parse(cachedStr).valData;
+        } catch (_) {}
+      }
+      
+      if (parentData && Array.isArray(parentData)) {
+        if (valData === null || valData === undefined) {
+          parentData = parentData.filter((item: any, idx: number) => {
+            const itemId = item && item.id !== undefined ? String(item.id) : String(idx);
+            return itemId !== childId;
+          });
+        } else {
+          let found = false;
+          parentData = parentData.map((item: any, idx: number) => {
+            const itemId = item && item.id !== undefined ? String(item.id) : String(idx);
+            if (itemId === childId) {
+              found = true;
+              return { ...item, ...valData };
+            }
+            return item;
+          });
+          if (!found) {
+            parentData.push(valData);
+          }
+        }
+      } else {
+        if (!parentData || typeof parentData !== "object") {
+          parentData = {};
+        }
+        if (valData === null || valData === undefined) {
+          delete parentData[childId];
+        } else {
+          parentData[childId] = { ...parentData[childId], ...valData };
+        }
+      }
+
+      localStorage.setItem(parentCacheKey, JSON.stringify({
+        valData: parentData,
+        exists: parentData ? (Array.isArray(parentData) ? parentData.length > 0 : Object.keys(parentData).length > 0) : false
+      }));
+
+      // Trigger listeners on parent path too!
+      const parentListeners = activeListeners.get(parentPath);
+      if (parentListeners) {
+        parentListeners.forEach(cb => {
+          try {
+            cb({
+              val: () => parentData,
+              exists: () => parentData ? (Array.isArray(parentData) ? parentData.length > 0 : Object.keys(parentData).length > 0) : false,
+              key: parts[parts.length - 2] || ""
+            });
+          } catch (e) {
+            console.error("Error triggering parent local listener:", e);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to update parent cache on triggerLocalUpdate:", e);
+    }
+  }
+}
+
 export function onValue(
   refObj: DatabaseReference,
   callback: (snapshot: any) => void,
   cancelCallback?: (error: any) => void
 ) {
-  const fRef = getFirestoreRef(refObj.path);
+  const path = refObj.path;
+  const fRef = getFirestoreRef(path);
   const isDoc = fRef instanceof DocumentReference;
-  const parts = refObj.path.split("/").filter(Boolean);
+  const parts = path.split("/").filter(Boolean);
   const collName = parts[0] || "default";
-  const cacheKey = `rtdb_cache:${refObj.path}`;
+  const cacheKey = `rtdb_cache:${path}`;
+
+  // Register callback
+  if (!activeListeners.has(path)) {
+    activeListeners.set(path, new Set());
+  }
+  activeListeners.get(path)!.add(callback);
 
   // Try loading from localStorage immediately to guarantee fast first-paint & fallback
   try {
@@ -121,7 +236,7 @@ export function onValue(
           callback({
             val: () => cached.valData,
             exists: () => cached.exists,
-            key: parts.pop() || ""
+            key: parts[parts.length - 1] || ""
           });
         } catch (e) {
           console.error("Error triggering cached onValue callback:", e);
@@ -133,7 +248,7 @@ export function onValue(
   }
 
   const handleListenerError = (error: any) => {
-    console.warn(`Firestore subscription error for path "${refObj.path}":`, error);
+    console.warn(`Firestore subscription error for path "${path}":`, error);
     if (error?.code === "resource-exhausted" || (error?.message && error.message.toLowerCase().includes("quota"))) {
       window.dispatchEvent(new CustomEvent("firebase-quota-exceeded", { detail: error }));
     }
@@ -142,9 +257,11 @@ export function onValue(
     }
   };
 
+  let unsubscribeFirestore = () => {};
+
   if (isDoc) {
     const docRef = fRef as DocumentReference;
-    return onSnapshot(
+    unsubscribeFirestore = onSnapshot(
       docRef,
       (docSnap) => {
         let valData = docSnap.exists() ? docSnap.data() : null;
@@ -175,7 +292,7 @@ export function onValue(
     );
   } else {
     const colRef = fRef as CollectionReference;
-    return onSnapshot(
+    unsubscribeFirestore = onSnapshot(
       colRef,
       (colSnap) => {
         const valData: any = {};
@@ -205,6 +322,13 @@ export function onValue(
       handleListenerError
     );
   }
+
+  return () => {
+    unsubscribeFirestore();
+    if (activeListeners.has(path)) {
+      activeListeners.get(path)!.delete(callback);
+    }
+  };
 }
 
 export async function get(refObj: DatabaseReference) {
@@ -293,109 +417,170 @@ export async function get(refObj: DatabaseReference) {
 }
 
 export async function set(refObj: DatabaseReference, data: any) {
-  const fRef = getFirestoreRef(refObj.path);
-  const isDoc = fRef instanceof DocumentReference;
+  const path = refObj.path;
+  const parts = path.split("/").filter(Boolean);
+  const collName = parts[0] || "default";
 
-  if (isDoc) {
-    const docRef = fRef as DocumentReference;
-    const parts = refObj.path.split("/").filter(Boolean);
-    const collName = parts[0] || "default";
-    let finalData = data;
-    if (collName === "banners") {
-      if (Array.isArray(data)) {
-        finalData = { list: data };
-      } else if (data && data.list) {
-        finalData = data;
-      } else {
-        finalData = { list: [] };
+  // Trigger local cache update first so UI updates instantly
+  let finalDataForCache = data;
+  if (collName === "banners" && Array.isArray(data)) {
+    finalDataForCache = data;
+  }
+  triggerLocalUpdate(path, finalDataForCache);
+
+  try {
+    const fRef = getFirestoreRef(path);
+    const isDoc = fRef instanceof DocumentReference;
+
+    if (isDoc) {
+      const docRef = fRef as DocumentReference;
+      let finalData = data;
+      if (collName === "banners") {
+        if (Array.isArray(data)) {
+          finalData = { list: data };
+        } else if (data && data.list) {
+          finalData = data;
+        } else {
+          finalData = { list: [] };
+        }
+      }
+      await setDoc(docRef, finalData);
+    } else {
+      const colRef = fRef as CollectionReference;
+      if (data && typeof data === "object") {
+        if (Array.isArray(data)) {
+          for (let i = 0; i < data.length; i++) {
+            const item = data[i];
+            if (item) {
+              const docId = item.id || String(i);
+              const docRef = doc(firestore, colRef.path, docId);
+              await setDoc(docRef, item);
+            }
+          }
+        } else {
+          for (const [key, val] of Object.entries(data)) {
+            if (val) {
+              const docRef = doc(firestore, colRef.path, key);
+              await setDoc(docRef, val);
+            }
+          }
+        }
       }
     }
-    await setDoc(docRef, finalData);
-  } else {
-    const colRef = fRef as CollectionReference;
-    if (data && typeof data === "object") {
-      if (Array.isArray(data)) {
-        for (let i = 0; i < data.length; i++) {
-          const item = data[i];
-          if (item) {
-            const docId = item.id || String(i);
-            const docRef = doc(firestore, colRef.path, docId);
-            await setDoc(docRef, item);
-          }
-        }
-      } else {
-        for (const [key, val] of Object.entries(data)) {
-          if (val) {
-            const docRef = doc(firestore, colRef.path, key);
-            await setDoc(docRef, val);
-          }
-        }
-      }
-    } else {
-      throw new Error(`Cannot set a whole collection with non-object data: ${refObj.path}`);
+  } catch (error: any) {
+    console.warn(`Firestore set error for path "${path}" (using local cache):`, error);
+    if (error?.code === "resource-exhausted" || (error?.message && error.message.toLowerCase().includes("quota"))) {
+      window.dispatchEvent(new CustomEvent("firebase-quota-exceeded", { detail: error }));
     }
   }
 }
 
 export async function update(refObj: DatabaseReference, data: any) {
-  const fRef = getFirestoreRef(refObj.path);
-  const isDoc = fRef instanceof DocumentReference;
+  const path = refObj.path;
 
-  if (isDoc) {
-    const docRef = fRef as DocumentReference;
-    await updateDoc(docRef, data);
-  } else {
-    const colRef = fRef as CollectionReference;
-    if (data && typeof data === "object") {
-      for (const [key, val] of Object.entries(data)) {
-        if (val) {
-          const docRef = doc(firestore, colRef.path, key);
-          await setDoc(docRef, val, { merge: true });
+  // Merge with existing local cache if possible and update
+  try {
+    const cacheKey = `rtdb_cache:${path}`;
+    const cachedStr = localStorage.getItem(cacheKey);
+    let currentVal: any = {};
+    if (cachedStr) {
+      currentVal = JSON.parse(cachedStr).valData || {};
+    }
+    const mergedData = { ...currentVal, ...data };
+    triggerLocalUpdate(path, mergedData);
+  } catch (e) {
+    console.warn("Failed to merge cache in update:", e);
+  }
+
+  try {
+    const fRef = getFirestoreRef(path);
+    const isDoc = fRef instanceof DocumentReference;
+
+    if (isDoc) {
+      const docRef = fRef as DocumentReference;
+      await updateDoc(docRef, data);
+    } else {
+      const colRef = fRef as CollectionReference;
+      if (data && typeof data === "object") {
+        for (const [key, val] of Object.entries(data)) {
+          if (val) {
+            const docRef = doc(firestore, colRef.path, key);
+            await setDoc(docRef, val, { merge: true });
+          }
         }
       }
+    }
+  } catch (error: any) {
+    console.warn(`Firestore update error for path "${path}" (using local cache):`, error);
+    if (error?.code === "resource-exhausted" || (error?.message && error.message.toLowerCase().includes("quota"))) {
+      window.dispatchEvent(new CustomEvent("firebase-quota-exceeded", { detail: error }));
     }
   }
 }
 
 export async function remove(refObj: DatabaseReference) {
-  const fRef = getFirestoreRef(refObj.path);
-  const isDoc = fRef instanceof DocumentReference;
+  const path = refObj.path;
+  triggerLocalUpdate(path, null);
 
-  if (isDoc) {
-    const docRef = fRef as DocumentReference;
-    await deleteDoc(docRef);
-  } else {
-    const colRef = fRef as CollectionReference;
-    const colSnap = await getDocs(colRef);
-    for (const d of colSnap.docs) {
-      await deleteDoc(d.ref);
+  try {
+    const fRef = getFirestoreRef(path);
+    const isDoc = fRef instanceof DocumentReference;
+
+    if (isDoc) {
+      const docRef = fRef as DocumentReference;
+      await deleteDoc(docRef);
+    } else {
+      const colRef = fRef as CollectionReference;
+      const colSnap = await getDocs(colRef);
+      for (const d of colSnap.docs) {
+        await deleteDoc(d.ref);
+      }
+    }
+  } catch (error: any) {
+    console.warn(`Firestore remove error for path "${path}" (using local cache):`, error);
+    if (error?.code === "resource-exhausted" || (error?.message && error.message.toLowerCase().includes("quota"))) {
+      window.dispatchEvent(new CustomEvent("firebase-quota-exceeded", { detail: error }));
     }
   }
 }
 
 export function push(refObj: DatabaseReference, data?: any): any {
-  const fRef = getFirestoreRef(refObj.path);
-
+  const path = refObj.path;
+  const fRef = getFirestoreRef(path);
+  let newId = "";
+  
   if (fRef instanceof CollectionReference) {
     const colRef = fRef as CollectionReference;
     const newDocRef = doc(colRef);
-    if (data !== undefined) {
-      setDoc(newDocRef, data);
-    }
-    return {
-      key: newDocRef.id,
-      path: refObj.path + "/" + newDocRef.id
-    };
+    newId = newDocRef.id;
   } else {
     const docRef = fRef as DocumentReference;
     const subCol = collection(docRef, "items");
     const newDocRef = doc(subCol);
-    if (data !== undefined) {
-      setDoc(newDocRef, data);
-    }
-    return {
-      key: newDocRef.id,
-      path: refObj.path + "/items/" + newDocRef.id
-    };
+    newId = newDocRef.id;
   }
+
+  const childPath = path + "/" + newId;
+  if (data !== undefined) {
+    triggerLocalUpdate(childPath, data);
+  }
+
+  (async () => {
+    try {
+      const targetRef = getFirestoreRef(childPath) as DocumentReference;
+      if (data !== undefined) {
+        await setDoc(targetRef, data);
+      }
+    } catch (error: any) {
+      console.warn(`Firestore push setDoc error for path "${childPath}":`, error);
+      if (error?.code === "resource-exhausted" || (error?.message && error.message.toLowerCase().includes("quota"))) {
+        window.dispatchEvent(new CustomEvent("firebase-quota-exceeded", { detail: error }));
+      }
+    }
+  })();
+
+  return {
+    key: newId,
+    path: childPath
+  };
 }

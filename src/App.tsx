@@ -1688,7 +1688,7 @@ export default function App() {
                         ></div>
                       ))
                     ) : (
-                      dbCategories.filter(cat => dbServices.some(g => g.category === cat.id)).map((cat) => {
+                      dbCategories.map((cat) => {
                         const isActive = selectedCategory === cat.id;
                         return (
                           <button
@@ -1720,31 +1720,38 @@ export default function App() {
                       ))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                      {dbServices
-                        .filter((service) => service.category === selectedCategory)
-                        .map((service) => (
-                          <div
-                            key={service.id}
-                            onClick={() => openTopup(service)}
-                            className="group bg-card-bg rounded-2xl overflow-hidden border border-zinc-900 hover:border-red-600 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(239,68,68,0.2)] active:scale-95 flex flex-col justify-between"
-                          >
-                            <div className="relative aspect-[4/3] overflow-hidden bg-black/60 flex items-center justify-center p-2 border-b border-zinc-900/40">
-                              <img
-                                src={service.image}
-                                alt={service.name}
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
-                              />
+                    dbServices.filter((service) => service.category === selectedCategory).length === 0 ? (
+                      <div className="col-span-full py-16 text-center border border-dashed border-zinc-800 rounded-3xl bg-black/20 px-4">
+                        <span className="text-3xl block mb-2">🎮</span>
+                        <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">No games or services available in this category yet.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                        {dbServices
+                          .filter((service) => service.category === selectedCategory)
+                          .map((service) => (
+                            <div
+                              key={service.id}
+                              onClick={() => openTopup(service)}
+                              className="group bg-card-bg rounded-2xl overflow-hidden border border-zinc-900 hover:border-red-600 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(239,68,68,0.2)] active:scale-95 flex flex-col justify-between"
+                            >
+                              <div className="relative aspect-[4/3] overflow-hidden bg-black/60 flex items-center justify-center p-2 border-b border-zinc-900/40">
+                                <img
+                                  src={service.image}
+                                  alt={service.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
+                                />
+                              </div>
+                              <div className="p-3 text-center bg-black/10">
+                                <p className="font-bold tracking-wider text-xs text-white group-hover:text-red-500 group-hover:filter group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] transition-all">
+                                  {service.name}
+                                </p>
+                              </div>
                             </div>
-                            <div className="p-3 text-center bg-black/10">
-                              <p className="font-bold tracking-wider text-xs text-white group-hover:text-red-500 group-hover:filter group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] transition-all">
-                                {service.name}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
+                          ))}
+                      </div>
+                    )
                   )}
                 </motion.div>
               )}
