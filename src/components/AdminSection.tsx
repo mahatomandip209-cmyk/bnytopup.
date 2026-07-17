@@ -474,14 +474,6 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
           return c;
         });
 
-        const requiredIds = ["ffbots", "topup", "voucher", "subscriptions"];
-        requiredIds.forEach(id => {
-          if (!list.some(c => c.id === id)) {
-            const defCat = defaultCats.find(c => c.id === id);
-            if (defCat) list.push(defCat);
-          }
-        });
-
         setDbCategories(list);
       } else {
         setDbCategories(defaultCats);
