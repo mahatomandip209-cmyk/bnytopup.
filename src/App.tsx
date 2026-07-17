@@ -134,6 +134,27 @@ export default function App() {
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [servicesLoading, setServicesLoading] = useState<boolean>(true);
 
+  // Keep activeService and selectedPkg synchronized with dbServices updates in real time
+  useEffect(() => {
+    if (activeService) {
+      const freshService = dbServices.find(s => s.id === activeService.id);
+      if (freshService) {
+        setActiveService(freshService);
+        if (selectedPkg) {
+          const freshPkg = freshService.packages.find(p => p.n === selectedPkg.n);
+          if (freshPkg) {
+            setSelectedPkg(freshPkg);
+          } else {
+            setSelectedPkg(null);
+          }
+        }
+      } else {
+        setActiveService(null);
+        setSelectedPkg(null);
+      }
+    }
+  }, [dbServices]);
+
   // Dynamic DB-loaded payment settings
   const [paymentSettings, setPaymentSettings] = useState({
     qrCode: "https://i.ibb.co/8nFCFgqw/WA-1772424062040.jpg",
@@ -1045,7 +1066,10 @@ export default function App() {
             allCodesList.push({ id: key, ...rawVoucherCodes[key] });
           });
         }
-        const availableCodes = allCodesList.filter(c => c.status === "available" || !c.status);
+        const availableCodes = allCodesList.filter(c => 
+          (c.status === "available" || !c.status) && 
+          (!selectedPkg || c.packageName === selectedPkg.n)
+        );
 
         // Determine multiplier from package name (e.g. "5 pics", "5 pcs", "10 pieces")
         let multiplier = 1;
@@ -1252,7 +1276,9 @@ export default function App() {
   const vouchersList = typeof rawVouchersObj === "object"
     ? Object.keys(rawVouchersObj).map((key: any) => ({ id: key, ...rawVouchersObj[key] }))
     : [];
-  const availableVouchersCount = vouchersList.filter((v: any) => v.status === "available" || !v.status).length;
+  const availableVouchersCount = selectedPkg 
+    ? vouchersList.filter((v: any) => (v.status === "available" || !v.status) && v.packageName === selectedPkg.n).length
+    : vouchersList.filter((v: any) => v.status === "available" || !v.status).length;
 
   return (
     <div className="min-h-screen bg-bg-navy text-white font-sans flex flex-col antialiased selection:bg-brand-orange selection:text-white">

@@ -44,6 +44,99 @@ import {
 } from "lucide-react";
 import { ServiceItem, GamePackage } from "../data/packages";
 
+export function getOrderRequirements(order: any): Array<{ label: string; value: string }> {
+  const reqs: Array<{ label: string; value: string }> = [];
+
+  const addVal = (label: string, val: any) => {
+    if (val === undefined || val === null || val === "") return;
+    
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed && typeof parsed === "object") {
+            Object.entries(parsed).forEach(([subK, subV]) => {
+              addVal(subK, subV);
+            });
+            return;
+          }
+        } catch (e) {
+          // treat as plain string
+        }
+      }
+    }
+
+    if (typeof val === "object" && val !== null) {
+      Object.entries(val).forEach(([subK, subV]) => {
+        addVal(subK, subV);
+      });
+      return;
+    }
+
+    reqs.push({
+      label: label
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/[_-]/g, ' ')
+        .trim()
+        .replace(/^\w/, (c) => c.toUpperCase()),
+      value: String(val)
+    });
+  };
+
+  if (order.submitted_requirements) {
+    addVal("Submitted Requirements", order.submitted_requirements);
+  }
+
+  if (order.requirements) {
+    addVal("Requirements", order.requirements);
+  }
+
+  if (order.playerUid) addVal("Player UID", order.playerUid);
+  if (order.customerEmail) addVal("Customer Game Email", order.customerEmail);
+  if (order.customerPassword) addVal("Activation Password", order.customerPassword);
+  if (order.whatsappNumber) addVal("Contact WhatsApp", order.whatsappNumber);
+
+  const standardKeys = [
+    "orderId",
+    "userOrderId",
+    "uid",
+    "email",
+    "uniqueId",
+    "game",
+    "packageName",
+    "price",
+    "quantity",
+    "status",
+    "timestamp",
+    "voucher_codes",
+    "playerUid",
+    "customerEmail",
+    "customerPassword",
+    "whatsappNumber",
+    "submitted_requirements",
+    "requirements"
+  ];
+
+  Object.keys(order).forEach((key) => {
+    if (!standardKeys.includes(key) && !key.toLowerCase().includes("email")) {
+      addVal(key, order[key]);
+    }
+  });
+
+  const seenLabels = new Set<string>();
+  const uniqueReqs: Array<{ label: string; value: string }> = [];
+  reqs.forEach(r => {
+    const normLabel = r.label.toLowerCase().replace(/\s+/g, "");
+    if (!seenLabels.has(normLabel)) {
+      seenLabels.add(normLabel);
+      uniqueReqs.push(r);
+    }
+  });
+
+  return uniqueReqs;
+}
+
 interface AdminSectionProps {
   db: any;
   currentUser: any;
@@ -107,6 +200,15 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
     const catId = (g.category || "").toLowerCase();
     const catObj = dbCategories.find(c => c.id === g.category);
     const catName = catObj ? (catObj.name || "").toLowerCase() : "";
+    
+    // Explicitly exclude other categories to avoid false positives
+    if (catId === "topup" || catId.includes("topup") || catName.includes("topup") || catName.includes("direct")) {
+      return false;
+    }
+    if (catId === "subscription" || catId.includes("subscription") || catName.includes("subscription")) {
+      return false;
+    }
+    
     return catId === "voucher" || catId.includes("voucher") || catName.includes("voucher");
   };
 
@@ -192,6 +294,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
   // Vouchers Management State
   const [selectedVoucherGameId, setSelectedVoucherGameId] = useState<string | null>(null);
+  const [selectedVoucherPackageName, setSelectedVoucherPackageName] = useState<string | null>(null);
   const [voucherTextArea, setVoucherTextArea] = useState("");
   const [voucherFilter, setVoucherFilter] = useState<"available" | "sold">("available");
 
@@ -1269,6 +1372,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                           }
                           if (item.id === "vouchers") {
                             setSelectedVoucherGameId(null);
+                            setSelectedVoucherPackageName(null);
                           }
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
@@ -1647,165 +1751,38 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
                       {/* Order Requirements details block */}
                       <div className="bg-black/20 border border-zinc-900/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono text-zinc-400">
-                        {order.submitted_requirements && typeof order.submitted_requirements === "object" ? (
-                          Object.entries(order.submitted_requirements).map(([label, val]: [string, any]) => {
-                            if (val === undefined || val === null || val === "") return null;
-                            const displayVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+                        {(() => {
+                          const reqs = getOrderRequirements(order);
+                          if (reqs.length === 0) {
                             return (
-                              <div key={label} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                <div className="min-w-0">
-                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
-                                    {label}
-                                  </span>
-                                  <strong className="text-white text-xs select-all block truncate">
-                                    {displayVal}
-                                  </strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(displayVal);
-                                    alert(`Copied ${label}: ${displayVal}`);
-                                  }}
-                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title={`Copy ${label}`}
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
+                              <div className="col-span-full text-center py-2 text-zinc-600 text-[11px]">
+                                No requirements submitted for this order
                               </div>
                             );
-                          })
-                        ) : (
-                          <>
-                            {/* Standard UID / credentials fields */}
-                            {order.playerUid && (
-                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                <div className="min-w-0">
-                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Player UID</span>
-                                  <strong className="text-red-500 text-xs tracking-wider select-all block truncate">{order.playerUid}</strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(order.playerUid);
-                                    alert(`Copied Player UID: ${order.playerUid}`);
-                                  }}
-                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title="Copy Player UID"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
+                          }
+                          return reqs.map((req) => (
+                            <div key={req.label} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
+                                  {req.label}
+                                </span>
+                                <strong className="text-white text-xs select-all block truncate">
+                                  {req.value}
+                                </strong>
                               </div>
-                            )}
-                            {order.customerEmail && (
-                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                <div className="min-w-0">
-                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Customer Game Email</span>
-                                  <strong className="text-white text-xs select-all block truncate">{order.customerEmail}</strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(order.customerEmail);
-                                    alert(`Copied Customer Game Email: ${order.customerEmail}`);
-                                  }}
-                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title="Copy Customer Game Email"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                            {order.customerPassword && (
-                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                <div className="min-w-0">
-                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Activation Password</span>
-                                  <strong className="text-white text-xs select-all block truncate">{order.customerPassword}</strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(order.customerPassword);
-                                    alert(`Copied Activation Password: ${order.customerPassword}`);
-                                  }}
-                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title="Copy Activation Password"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                            {order.whatsappNumber && (
-                              <div className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                <div className="min-w-0">
-                                  <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">Contact WhatsApp</span>
-                                  <strong className="text-white text-xs select-all block truncate">{order.whatsappNumber}</strong>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(order.whatsappNumber);
-                                    alert(`Copied Contact WhatsApp: ${order.whatsappNumber}`);
-                                  }}
-                                  className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                  title="Copy Contact WhatsApp"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Render all other dynamic requirement keys */}
-                            {Object.keys(order)
-                              .filter(
-                                (key) =>
-                                  ![
-                                    "orderId",
-                                    "userOrderId",
-                                    "uid",
-                                    "email",
-                                    "uniqueId",
-                                    "game",
-                                    "packageName",
-                                    "price",
-                                    "quantity",
-                                    "status",
-                                    "timestamp",
-                                    "voucher_codes",
-                                    "playerUid",
-                                    "customerEmail",
-                                    "customerPassword",
-                                    "whatsappNumber",
-                                    "submitted_requirements",
-                                  ].includes(key)
-                              )
-                              .map((key) => {
-                                const val = order[key];
-                                if (val === undefined || val === null || val === "") return null;
-                                const displayKey = key
-                                  .replace(/_/g, " ")
-                                  .replace(/\b\w/g, (char) => char.toUpperCase());
-                                const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
-                                return (
-                                  <div key={key} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                                    <div className="min-w-0">
-                                      <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
-                                        {displayKey}
-                                      </span>
-                                      <strong className="text-white text-xs select-all block truncate">
-                                        {strVal}
-                                      </strong>
-                                    </div>
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(strVal);
-                                        alert(`Copied ${displayKey}: ${strVal}`);
-                                      }}
-                                      className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
-                                      title={`Copy ${displayKey}`}
-                                    >
-                                      <Copy className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                          </>
-                        )}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(req.value);
+                                  alert(`Copied ${req.label}: ${req.value}`);
+                                }}
+                                className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                title={`Copy ${req.label}`}
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ));
+                        })()}
                       </div>
 
                       {/* Voucher Codes Section */}
@@ -3320,9 +3297,106 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                 const codesList = typeof rawCodes === "object"
                   ? Object.keys(rawCodes).map(k => ({ id: k, ...rawCodes[k] }))
                   : [];
-                
-                const availableCodes = codesList.filter((c: any) => c.status === "available" || !c.status);
-                const soldCodes = codesList.filter((c: any) => c.status === "sold" || c.status === "soldout");
+
+                // 2. PRODUCT SELECTION VIEW (if selectedVoucherPackageName is null)
+                if (!selectedVoucherPackageName) {
+                  return (
+                    <div className="space-y-6">
+                      {/* HEADER */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/30 border border-zinc-900 p-5 rounded-2xl">
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => setSelectedVoucherGameId(null)}
+                            className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded-xl cursor-pointer transition-colors"
+                            title="Back to Games"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={gameObj.image}
+                              alt={gameObj.name}
+                              className="w-12 h-12 rounded-xl object-cover border border-zinc-900"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div>
+                              <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest block">Managing Vouchers Stock for</span>
+                              <h3 className="font-orbitron font-extrabold text-white text-md uppercase tracking-wider">{gameObj.name}</h3>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* PRODUCTS LIST */}
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                          Select a Product / Package to Manage Codes:
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {(gameObj.packages || []).map((pkg: any) => {
+                            const availableCount = codesList.filter((c: any) => 
+                              (c.status === "available" || !c.status) && c.packageName === pkg.n
+                            ).length;
+                            const soldCount = codesList.filter((c: any) => 
+                              (c.status === "sold" || c.status === "soldout") && c.packageName === pkg.n
+                            ).length;
+
+                            return (
+                              <div
+                                key={pkg.n}
+                                onClick={() => {
+                                  setSelectedVoucherPackageName(pkg.n);
+                                  setVoucherTextArea("");
+                                  setVoucherFilter("available");
+                                }}
+                                className="bg-black/35 border border-zinc-900 hover:border-zinc-800 p-4 rounded-2xl flex flex-col justify-between gap-4 cursor-pointer hover:bg-black/50 hover:scale-[1.01] transition-all group duration-200"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <strong className="text-white text-sm group-hover:text-red-500 transition-colors block">
+                                    {pkg.n}
+                                  </strong>
+                                  <span className="bg-red-950/40 border border-red-900/30 text-red-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg">
+                                    NPR {pkg.p}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center border-t border-zinc-900/60 pt-3">
+                                  <div>
+                                    <span className="text-[8px] text-zinc-500 font-mono block uppercase">Available Codes</span>
+                                    <span className={`font-orbitron font-black text-xs block ${availableCount > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                      {availableCount > 0 ? `${availableCount} Available` : "Sold Out"}
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[8px] text-zinc-500 font-mono block uppercase">Sold Codes</span>
+                                    <span className="font-orbitron font-bold text-xs text-zinc-500 block">
+                                      {soldCount} Sold
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {(gameObj.packages || []).length === 0 && (
+                            <div className="col-span-full py-16 text-center text-zinc-600 font-mono text-xs bg-black/20 border border-zinc-900 border-dashed rounded-2xl">
+                              No packages/products configured for this game yet. Add products in the "Products" tab first.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 3. CODE MANAGER FOR SELECTED PRODUCT
+                const availableCodes = codesList.filter((c: any) => 
+                  (c.status === "available" || !c.status) && c.packageName === selectedVoucherPackageName
+                );
+                const soldCodes = codesList.filter((c: any) => 
+                  (c.status === "sold" || c.status === "soldout") && c.packageName === selectedVoucherPackageName
+                );
                 const currentFilteredCodes = voucherFilter === "available" ? availableCodes : soldCodes;
 
                 const handleAddVoucherCodes = async () => {
@@ -3343,7 +3417,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                       updatedVoucherCodes[codeId] = {
                         code: code,
                         status: "available",
-                        createdAt: new Date().toISOString()
+                        createdAt: new Date().toISOString(),
+                        packageName: selectedVoucherPackageName // Tie it specifically to this package!
                       };
                     });
 
@@ -3352,9 +3427,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     });
 
                     setVoucherTextArea("");
-                    alert(`Successfully added ${codesToAdd.length} voucher codes!`);
+                    alert(`Successfully added ${codesToAdd.length} codes for product "${selectedVoucherPackageName}"!`);
                   } catch (err: any) {
-                    alert("Error adding voucher codes: " + err.message);
+                    alert("Error adding codes: " + err.message);
                   }
                 };
 
@@ -3378,9 +3453,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-black/30 border border-zinc-900 p-5 rounded-2xl">
                       <div className="flex items-center gap-4">
                         <button
-                          onClick={() => setSelectedVoucherGameId(null)}
+                          onClick={() => setSelectedVoucherPackageName(null)}
                           className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded-xl cursor-pointer transition-colors"
-                          title="Back to Games"
+                          title="Back to Products"
                         >
                           <ArrowLeft className="w-4 h-4" />
                         </button>
@@ -3393,8 +3468,12 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                             referrerPolicy="no-referrer"
                           />
                           <div>
-                            <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest block">Managing Vouchers Stock for</span>
-                            <h3 className="font-orbitron font-extrabold text-white text-md uppercase tracking-wider">{gameObj.name}</h3>
+                            <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest block">
+                              Managing Vouchers for {gameObj.name} &bull; Product:
+                            </span>
+                            <h3 className="font-orbitron font-extrabold text-red-500 text-md uppercase tracking-wider">
+                              {selectedVoucherPackageName}
+                            </h3>
                           </div>
                         </div>
                       </div>
@@ -3408,7 +3487,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                         <div className="flex items-center gap-2 text-red-500">
                           <Ticket className="w-4 h-4" />
                           <span className="text-[10px] font-extrabold uppercase tracking-widest block">
-                            Add Voucher Codes (One Per Line)
+                            Add Codes for {selectedVoucherPackageName}
                           </span>
                         </div>
 
