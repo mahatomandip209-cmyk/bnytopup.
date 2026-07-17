@@ -229,6 +229,15 @@ export default function App() {
             };
           }).filter(Boolean);
         }
+        // Check if we need to force re-seed the new games list (Freefire, Canva, Netflix, Spotify, Unipin)
+        const hasNetflix = list.some(g => g.id === "netflix" || g.name === "Netflix");
+        const hasPubg = list.some(g => g.id === "pubg_uc" || g.name === "PUBG UC" || g.id === "ff_topup" || g.id === "ff_levelup");
+        if (!hasNetflix || hasPubg) {
+          remove(ref(db, "games"));
+          set(gamesRef, servicesData);
+          list = servicesData;
+        }
+
         setDbServices(list);
       } else {
         // Seed default games

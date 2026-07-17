@@ -42,7 +42,7 @@ import {
   UserPlus,
   Shield
 } from "lucide-react";
-import { ServiceItem, GamePackage } from "../data/packages";
+import { ServiceItem, GamePackage, servicesData } from "../data/packages";
 
 export function getOrderRequirements(order: any): Array<{ label: string; value: string }> {
   const reqs: Array<{ label: string; value: string }> = [];
@@ -371,9 +371,20 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
             };
           }).filter(Boolean);
         }
+
+        // Check if we need to force re-seed the new games list (Freefire, Canva, Netflix, Spotify, Unipin)
+        const hasNetflix = list.some(g => g.id === "netflix" || g.name === "Netflix");
+        const hasPubg = list.some(g => g.id === "pubg_uc" || g.name === "PUBG UC" || g.id === "ff_topup" || g.id === "ff_levelup");
+        if (!hasNetflix || hasPubg) {
+          remove(ref(db, "games"));
+          set(gamesRef, servicesData);
+          list = servicesData;
+        }
+
         setDbGames(list);
       } else {
-        setDbGames([]);
+        set(gamesRef, servicesData);
+        setDbGames(servicesData);
       }
     });
 

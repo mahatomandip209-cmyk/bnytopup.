@@ -21,11 +21,11 @@ export interface ServiceItem {
 
 export const servicesData: ServiceItem[] = [
   {
-    id: "ff_topup",
-    name: "Free Fire Topup",
+    id: "freefire_topup",
+    name: "Freefire",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
     category: "topup",
-    description: "Instant in-game Free Fire Diamonds top-up directly to your UID",
+    description: "Instant in-game Freefire Diamonds top-up directly to your Player UID",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
     ],
@@ -39,47 +39,93 @@ export const servicesData: ServiceItem[] = [
       { n: "610 Diamonds", p: 500 },
       { n: "850 Diamonds", p: 690 },
       { n: "1090 Diamonds", p: 875 },
-      { n: "1240 Diamonds", p: 970 },
-      { n: "2530 Diamonds", p: 1980 },
-      { n: "5060 Diamonds", p: 3925 },
-      { n: "10120 Diamonds", p: 7850 },
-      { n: "15180 Diamonds", p: 11695 },
-      { n: "20240 Diamonds", p: 15600 },
-      { n: "101200 Diamonds", p: 78900 }
+      { n: "1240 Diamonds", p: 970 }
     ]
   },
   {
-    id: "ff_levelup",
-    name: "Free Fire Level Up Pass",
+    id: "levelup_pass",
+    name: "Level up Pass",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "voucher",
-    description: "Get Level Up Pass diamonds sent instantly to your player UID",
+    category: "topup",
+    description: "Get Level up Pass diamonds sent instantly to your player UID",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
     ],
     packages: [
-      { n: "Level 6 (120 Diamonds)", p: 65 },
-      { n: "Level 10 (200 Diamonds)", p: 95 },
-      { n: "Level 15 (200 Diamonds)", p: 95 },
-      { n: "Level 20 (200 Diamonds)", p: 95 },
-      { n: "Level 25 (200 Diamonds)", p: 95 },
-      { n: "Level 30 (350 Diamonds)", p: 140 },
-      { n: "All Levels (1270 Diamonds)", p: 570 }
+      { n: "All Levels (1270 Diamonds)", p: 570 },
+      { n: "Level 10 Premium", p: 150 }
     ]
   },
   {
-    id: "ff_membership",
-    name: "Free Fire Membership",
+    id: "membership",
+    name: "Membership",
     image: "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
-    category: "subscriptions",
-    description: "Weekly & Monthly premium Free Fire subscription loaded via Player UID",
+    category: "topup",
+    description: "Weekly & Monthly premium Freefire memberships loaded via Player UID",
     fields: [
       { label: "Player UID", placeholder: "e.g. 5839218392", type: "text", key: "playerUid" }
     ],
     packages: [
-      { n: "Weekly Elite (90 Diamonds)", p: 65 },
       { n: "Weekly Membership", p: 195 },
       { n: "Monthly Membership", p: 960 }
+    ]
+  },
+  {
+    id: "canva_pro",
+    name: "Canva pro",
+    image: "https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=600&auto=format&fit=crop",
+    category: "subscriptions",
+    description: "Upgrade your Canva account to Premium Pro instantly via invitation link",
+    fields: [
+      { label: "Email Address", placeholder: "e.g. user@example.com", type: "email", key: "email" }
+    ],
+    packages: [
+      { n: "Canva Pro 1 Month", p: 99 },
+      { n: "Canva Pro 1 Year", p: 499 }
+    ]
+  },
+  {
+    id: "netflix",
+    name: "Netflix",
+    image: "https://images.unsplash.com/photo-1574375927938-d5a98e8edd86?q=80&w=600&auto=format&fit=crop",
+    category: "subscriptions",
+    description: "Premium Netflix Ultra HD screens and full private accounts",
+    fields: [
+      { label: "Contact Number / Email", placeholder: "e.g. 98XXXXXXXX or email", type: "text", key: "contact" }
+    ],
+    packages: [
+      { n: "Netflix Premium 1 Month (1 Screen Shared)", p: 250 },
+      { n: "Netflix Premium 1 Month (Private 4 Screens)", p: 1200 }
+    ]
+  },
+  {
+    id: "spotify",
+    name: "Spotify",
+    image: "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=600&auto=format&fit=crop",
+    category: "subscriptions",
+    description: "Get premium high-fidelity ad-free music subscription for your own Spotify account",
+    fields: [
+      { label: "Spotify Account Email", placeholder: "e.g. music@example.com", type: "email", key: "email" }
+    ],
+    packages: [
+      { n: "Spotify Premium 1 Month (Family Shared)", p: 99 },
+      { n: "Spotify Premium 3 Months (Individual)", p: 299 },
+      { n: "Spotify Premium 1 Year (Family Shared)", p: 499 }
+    ]
+  },
+  {
+    id: "unipin_voucher",
+    name: "Unipin voucher",
+    image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=600&auto=format&fit=crop",
+    category: "voucher",
+    description: "Instant digital UniPin gift vouchers and load pins",
+    fields: [
+      { label: "Email for Receipt", placeholder: "e.g. delivery@example.com", type: "email", key: "email" }
+    ],
+    packages: [
+      { n: "UniPin Rs. 100 Voucher", p: 110 },
+      { n: "UniPin Rs. 500 Voucher", p: 530 },
+      { n: "UniPin Rs. 1000 Voucher", p: 1050 }
     ]
   },
   {
@@ -93,8 +139,7 @@ export const servicesData: ServiceItem[] = [
     ],
     packages: [
       { n: "30 Days — 6000 Likes", p: 649 },
-      { n: "60 Days — 12000 Likes", p: 1298 },
-      { n: "1 Year — 72000 Likes", p: 4650 }
+      { n: "60 Days — 12000 Likes", p: 1298 }
     ]
   },
   {
@@ -108,29 +153,7 @@ export const servicesData: ServiceItem[] = [
     ],
     packages: [
       { n: "1 Squad", p: 375 },
-      { n: "2 Squad", p: 725 },
-      { n: "3 Squad", p: 1075 },
-      { n: "4 Squad", p: 1425 },
-      { n: "5 Squad", p: 1750 },
-      { n: "6 Squad", p: 2050 }
-    ]
-  },
-  {
-    id: "pubg_uc",
-    name: "PUBG UC",
-    image: "https://i.ibb.co/jPZjCShd/IMG-20260302-211625.jpg",
-    category: "topup",
-    description: "Instant PUBG Mobile Unknown Cash top-up via Character ID",
-    fields: [
-      { label: "Player ID", placeholder: "e.g. 5183928192", type: "text", key: "playerUid" }
-    ],
-    packages: [
-      { n: "60 UC", p: 147 },
-      { n: "325 UC", p: 730 },
-      { n: "660 UC", p: 1550 },
-      { n: "1800 UC", p: 3550 },
-      { n: "3850 UC", p: 7040 },
-      { n: "8100 UC", p: 14050 }
+      { n: "2 Squad", p: 725 }
     ]
   }
 ];
