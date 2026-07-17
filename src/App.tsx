@@ -305,10 +305,7 @@ export default function App() {
 
   // Slider Image Banner Carousel State
   const [slideIndex, setSlideIndex] = useState(0);
-  const [dbBanners, setDbBanners] = useState<string[]>([
-    "https://i.ibb.co/rG5h77vw/1770000367736-1a203456.jpg",
-    "https://i.ibb.co/7tFsSW46/1770040656764-0a668a00.jpg"
-  ]);
+  const [dbBanners, setDbBanners] = useState<string[]>([]);
 
   // Is Admin detection
   const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
@@ -568,6 +565,8 @@ export default function App() {
         setDbBanners(val);
       } else if (val) {
         setDbBanners(Object.values(val));
+      } else {
+        setDbBanners([]);
       }
     });
 
@@ -1457,55 +1456,63 @@ export default function App() {
 
           {/* Dynamic home slider only shows in home section */}
           {activeSection === "home" && (
-            <div id="home-slider" className="w-full aspect-video relative overflow-hidden border-b border-brand-blue/10 bg-zinc-950">
-              <div
-                className="flex w-full h-full transition-transform duration-1000 ease-in-out"
-                style={{ transform: `translateX(-${slideIndex * 100}%)` }}
-              >
-                {dbBanners.map((banner, index) => {
-                  const imageUrl = typeof banner === "string" ? banner : (banner?.url || "");
-                  const redirectUrl = typeof banner === "string" ? "" : (banner?.link || "");
-                  
-                  const imgContent = (
-                    <img
-                      src={imageUrl}
-                      alt={`Promo Slide ${index + 1}`}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                  );
-
-                  return (
-                    <div key={index} className="min-w-full h-full relative">
-                      {redirectUrl ? (
-                        <a href={redirectUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
-                          {imgContent}
-                        </a>
-                      ) : (
-                        imgContent
-                      )}
-                      {/* Dark gradient mask */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-bg-navy via-transparent to-transparent pointer-events-none"></div>
-                    </div>
-                  );
-                })}
+            dbBanners.length === 0 ? (
+              <div id="home-slider" className="w-full aspect-video flex items-center justify-center bg-white border-b border-zinc-200">
+                <span className="text-black font-sans font-black text-sm uppercase tracking-wider">
+                  No banner available
+                </span>
               </div>
-              
-              {/* Tagline overlay removed */}
+            ) : (
+              <div id="home-slider" className="w-full aspect-video relative overflow-hidden border-b border-brand-blue/10 bg-zinc-950">
+                <div
+                  className="flex w-full h-full transition-transform duration-1000 ease-in-out"
+                  style={{ transform: `translateX(-${slideIndex * 100}%)` }}
+                >
+                  {dbBanners.map((banner, index) => {
+                    const imageUrl = typeof banner === "string" ? banner : (banner?.url || "");
+                    const redirectUrl = typeof banner === "string" ? "" : (banner?.link || "");
+                    
+                    const imgContent = (
+                      <img
+                        src={imageUrl}
+                        alt={`Promo Slide ${index + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    );
 
-              {/* Pagination Dots */}
-              <div className="absolute bottom-4 right-5 flex gap-1.5 z-10">
-                {dbBanners.map((_, index) => (
-                  <div
-                    key={index}
-                    onClick={() => setSlideIndex(index)}
-                    className={`w-2.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                      slideIndex === index ? "w-6 bg-brand-orange" : "bg-zinc-700"
-                    }`}
-                  ></div>
-                ))}
+                    return (
+                      <div key={index} className="min-w-full h-full relative">
+                        {redirectUrl ? (
+                          <a href={redirectUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                            {imgContent}
+                          </a>
+                        ) : (
+                          imgContent
+                        )}
+                        {/* Dark gradient mask */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-navy via-transparent to-transparent pointer-events-none"></div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Tagline overlay removed */}
+
+                {/* Pagination Dots */}
+                <div className="absolute bottom-4 right-5 flex gap-1.5 z-10">
+                  {dbBanners.map((_, index) => (
+                    <div
+                      key={index}
+                      onClick={() => setSlideIndex(index)}
+                      className={`w-2.5 h-1.5 rounded-full transition-all cursor-pointer ${
+                        slideIndex === index ? "w-6 bg-brand-orange" : "bg-zinc-700"
+                      }`}
+                    ></div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* Dynamic Render Section Router */}
