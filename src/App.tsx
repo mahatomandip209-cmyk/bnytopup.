@@ -1028,12 +1028,30 @@ export default function App() {
           });
         }
         const availableCodes = allCodesList.filter(c => c.status === "available" || !c.status);
-        if (availableCodes.length < quantity) {
-          alert(`Not enough voucher codes in stock! Available: ${availableCodes.length}, Requested: ${quantity}`);
+
+        // Determine multiplier from package name (e.g. "5 pics", "5 pcs", "10 pieces")
+        let multiplier = 1;
+        if (selectedPkg && selectedPkg.n) {
+          const pkgName = selectedPkg.n;
+          const match = pkgName.match(/(\d+)\s*(pics|pic|pcs|pc|piece|pieces|x|unit|units)/i);
+          if (match) {
+            multiplier = parseInt(match[1], 10);
+          } else {
+            const matchAlt = pkgName.match(/(x|pics|pic|pcs|pc)\s*(\d+)/i);
+            if (matchAlt) {
+              multiplier = parseInt(matchAlt[2], 10);
+            }
+          }
+        }
+
+        const totalNeeded = quantity * multiplier;
+
+        if (availableCodes.length < totalNeeded) {
+          alert(`Not enough voucher codes in stock! Available: ${availableCodes.length}, Requested: ${totalNeeded}`);
           setLoading(false);
           return;
         }
-        assignedVouchers = availableCodes.slice(0, quantity);
+        assignedVouchers = availableCodes.slice(0, totalNeeded);
 
         // Prepare the updated voucher codes map to save back
         updatedVoucherCodesMap = { ...rawVoucherCodes };
