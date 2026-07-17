@@ -1194,6 +1194,25 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
     }
   };
 
+  const handleResetOrdersAndSales = async () => {
+    const isConfirmed = await confirmAction(
+      "Are you sure you want to delete all order history and reset total sales to NPR 0? This will permanently clear both user logs and admin logs."
+    );
+    if (!isConfirmed) return;
+
+    try {
+      // 1. Clear all orders in administrative collection
+      await remove(ref(db, "all_orders"));
+
+      // 2. Clear all user logs
+      await remove(ref(db, "orders"));
+
+      alert("Successfully reset all orders and sales to 0!");
+    } catch (err: any) {
+      alert("Error resetting stats: " + err.message);
+    }
+  };
+
   // ---------------- COMPUTING STATS ----------------
   const totalSales = allOrders
     .filter(o => o.status === "approved")
@@ -1429,6 +1448,23 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
         {/* 1. DASHBOARD OVERVIEW */}
         {adminTab === "dashboard" && (
           <div className="space-y-8 animate-fadeIn">
+            {/* DASHBOARD HEADER WITH RESET CONTROL */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-black/30 border border-zinc-900/60 p-5 rounded-3xl gap-4">
+              <div>
+                <h2 className="text-sm font-orbitron font-extrabold uppercase tracking-widest text-white flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-emerald-500" /> System Analytics
+                </h2>
+                <p className="text-[10px] text-zinc-500 font-mono mt-1 uppercase">Track sales, total orders, and user count in real-time.</p>
+              </div>
+              <button
+                onClick={handleResetOrdersAndSales}
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-950/20 hover:bg-red-900/30 border border-red-900/50 hover:border-red-600 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider text-red-500 hover:text-white transition-all cursor-pointer shadow-lg shadow-red-500/5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Reset All Orders & Sales</span>
+              </button>
+            </div>
+
             {/* STATISTICS ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Total Sales Card */}
