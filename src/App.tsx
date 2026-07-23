@@ -384,12 +384,10 @@ export default function App() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [dbBanners, setDbBanners] = useState<string[]>([]);
 
-  // Is Admin detection
+  // Is Admin detection (Direct access enabled - login removed)
   const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
-  const isAdmin = currentUser?.email === "bnyshopadminpanel@gmail.com" || 
-    dbTeamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
-  const isSupportStaff = currentUser?.email !== "bnyshopadminpanel@gmail.com" && 
-    dbTeamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
+  const isAdmin = true;
+  const isSupportStaff = false;
 
   // Redirect support staff if on restricted views
   useEffect(() => {
@@ -2137,19 +2135,15 @@ export default function App() {
 
               {/* 6. ADMIN PORTAL SECTION */}
               {activeSection === "admin" && (
-                isAdmin ? (
-                  <motion.div
-                    key="admin"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <AdminSection db={db} currentUser={currentUser} services={dbServices.length > 0 ? dbServices : servicesData} setActiveSection={setActiveSection} customConfirm={(window as any).customConfirm} />
-                  </motion.div>
-                ) : (
-                  renderAdminLogin()
-                )
+                <motion.div
+                  key="admin"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <AdminSection db={db} currentUser={currentUser} services={dbServices.length > 0 ? dbServices : servicesData} setActiveSection={setActiveSection} customConfirm={(window as any).customConfirm} />
+                </motion.div>
               )}
 
             </AnimatePresence>
