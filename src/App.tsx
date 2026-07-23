@@ -1346,28 +1346,18 @@ export default function App() {
         uid: currentUser.uid,
         email: currentUser.email,
         amount: parseInt(walletAmt),
-        trx: "N/A",
+        trx: esewaTrx.trim() || "N/A",
         status: "pending",
         proofImage: depositProofImage, // Base64 encoded screenshot
         timestamp: Date.now(),
-        paymentMethod: "ESEWA"
+        paymentMethod: depositMethod ? depositMethod.toUpperCase() : "ESEWA"
       });
-
-      const msg = `🚀 *BNY SHOP DEPOSIT PROOF* 🚀\n\n` +
-                  `👤 *Member Name:* ${userData.name}\n` +
-                  `📧 *Member Email:* ${currentUser.email}\n` +
-                  `💳 *Method:* ESEWA\n` +
-                  `💰 *Load Amount:* NPR ${walletAmt}\n` +
-                  `🖼️ *Image Proof Included:* Yes (Uploaded directly on platform)`;
-
-      const whatsappUrl = `https://wa.me/9779825880400?text=${encodeURIComponent(msg)}`;
-      window.open(whatsappUrl, "_blank");
 
       // Reset fields
       setWalletAmt("");
       setEsewaTrx("");
       setDepositProofImage(null);
-      alert("Deposit slip loaded! Our auditors will credit your balance shortly.");
+      alert("Deposit request submitted successfully! It has been sent to the Admin Panel for review.");
     } catch (err: any) {
       alert(err.message || "Failed to log deposit");
     } finally {
@@ -1929,7 +1919,7 @@ export default function App() {
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
-                            <MessageCircle className="w-4 h-4" />
+                            <CheckCircle2 className="w-4 h-4 text-white" />
                             SUBMIT DEPOSIT PROOF
                           </>
                         )}

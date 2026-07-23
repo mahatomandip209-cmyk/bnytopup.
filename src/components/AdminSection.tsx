@@ -1605,7 +1605,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                         </div>
 
                         {dep.proofImage && (
-                          <div className="bg-black/40 border border-zinc-900/60 p-4 rounded-2xl space-y-2">
+                          <div className="bg-black/40 border border-zinc-900/60 p-4 rounded-2xl space-y-3">
                             <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-extrabold font-mono">Receipt Screenshot</span>
                             <div
                               onClick={() => setPreviewImage(dep.proofImage)}
@@ -1621,6 +1621,14 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                 <span className="font-mono text-[9px] uppercase tracking-wider font-bold">Open Screenshot</span>
                               </div>
                             </div>
+
+                            <button
+                              onClick={() => setPreviewImage(dep.proofImage)}
+                              className="w-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 font-mono text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                            >
+                              <Eye className="w-4 h-4" />
+                              VIEW SCREENSHOT
+                            </button>
                           </div>
                         )}
 
@@ -1983,8 +1991,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                       </div>
 
                       {dep.proofImage && (
-                        <div className="bg-black/40 border border-zinc-900/60 p-4 rounded-2xl space-y-2">
-                          <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-extrabold font-mono">Receipt Screenshot (Click to View Full Size)</span>
+                        <div className="bg-black/40 border border-zinc-900/60 p-4 rounded-2xl space-y-3">
+                          <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-extrabold font-mono">Receipt Screenshot</span>
                           <div
                             onClick={() => setPreviewImage(dep.proofImage)}
                             className="relative group overflow-hidden rounded-xl border border-zinc-800/80 cursor-pointer bg-black/60 flex items-center justify-center p-2"
@@ -1999,6 +2007,14 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                               <span className="font-mono text-[9px] uppercase tracking-wider font-bold">Open Screenshot</span>
                             </div>
                           </div>
+
+                          <button
+                            onClick={() => setPreviewImage(dep.proofImage)}
+                            className="w-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 font-mono text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+                          >
+                            <Eye className="w-4 h-4" />
+                            VIEW SCREENSHOT
+                          </button>
                         </div>
                       )}
 
@@ -4097,25 +4113,36 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
         )}
 
         {previewImage && (
-          <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-[99999]">
+          <div
+            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[99999] cursor-pointer"
+          >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center bg-[#090e1a] border border-zinc-800 p-5 rounded-3xl shadow-2xl space-y-4"
             >
-              <button
-                onClick={() => setPreviewImage(null)}
-                className="absolute -top-12 right-0 text-zinc-400 hover:text-white bg-black/50 hover:bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider"
-              >
-                <X className="w-4 h-4" />
-                <span>Close Preview</span>
-              </button>
-              <div className="bg-zinc-950/80 border border-zinc-900 p-2 rounded-2xl max-w-full overflow-hidden flex items-center justify-center">
+              <div className="w-full flex justify-between items-center pb-3 border-b border-zinc-800/80">
+                <span className="text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-blue-500" /> Payment Receipt Screenshot
+                </span>
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold uppercase"
+                  title="Close Preview"
+                >
+                  <X className="w-5 h-5" />
+                  <span>CLOSE (X)</span>
+                </button>
+              </div>
+
+              <div className="w-full max-h-[75vh] overflow-auto flex items-center justify-center rounded-2xl bg-black/90 border border-zinc-900 p-3">
                 <img
                   src={previewImage}
                   alt="Full proof receipt preview"
-                  className="max-h-[80vh] max-w-full object-contain rounded-xl select-none"
+                  className="max-h-[70vh] max-w-full object-contain rounded-xl select-none"
                 />
               </div>
             </motion.div>
