@@ -1061,8 +1061,10 @@ export default function App() {
       finalPriceNPR = basePrice * quantity;
       finalPackageName = quantity > 1 ? `${selectedPkg.n} (Qty: ${quantity})` : selectedPkg.n;
 
-      // Validate dynamic fields based on configurations (skip validation for voucher games)
-      const fieldsToValidate = isVoucher ? [] : (activeService.fields || []);
+      // Validate dynamic fields based on configurations (or fallback default requirements)
+      const fieldsToValidate = (activeService.fields && activeService.fields.length > 0)
+        ? activeService.fields
+        : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }];
 
       for (const f of fieldsToValidate) {
         if (!fieldsState[f.key]) {
@@ -1084,20 +1086,21 @@ export default function App() {
 
     // Build human-readable submitted requirements
     const submitted_requirements: Record<string, string> = {};
-    if (!isVoucher) {
-      const fieldsToValidate = activeService.fields || [];
-      fieldsToValidate.forEach((f: any) => {
-        if (fieldsState[f.key]) {
-          submitted_requirements[f.label || f.key] = fieldsState[f.key];
-        }
-      });
-      if (activeService.id === "usdt") {
-        if (fieldsState.walletAddress) submitted_requirements["Wallet Address"] = fieldsState.walletAddress;
-        if (fieldsState.network) submitted_requirements["Network"] = fieldsState.network;
-        if (fieldsState.whatsappNumber) submitted_requirements["WhatsApp Number"] = fieldsState.whatsappNumber;
-        if (fieldsState.cryptoAmount) submitted_requirements["Crypto Amount"] = fieldsState.cryptoAmount;
-        if (fieldsState.txType) submitted_requirements["Transaction Type"] = fieldsState.txType;
+    const fieldsToCollect = (activeService.fields && activeService.fields.length > 0)
+      ? activeService.fields
+      : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }];
+
+    fieldsToCollect.forEach((f: any) => {
+      if (fieldsState[f.key]) {
+        submitted_requirements[f.label || f.key] = fieldsState[f.key];
       }
+    });
+    if (activeService.id === "usdt") {
+      if (fieldsState.walletAddress) submitted_requirements["Wallet Address"] = fieldsState.walletAddress;
+      if (fieldsState.network) submitted_requirements["Network"] = fieldsState.network;
+      if (fieldsState.whatsappNumber) submitted_requirements["WhatsApp Number"] = fieldsState.whatsappNumber;
+      if (fieldsState.cryptoAmount) submitted_requirements["Crypto Amount"] = fieldsState.cryptoAmount;
+      if (fieldsState.txType) submitted_requirements["Transaction Type"] = fieldsState.txType;
     }
 
     // Fetch and assign voucher codes first if it's a voucher game
@@ -1327,9 +1330,8 @@ export default function App() {
 
   const activeServiceCategoryObj = dbCategories.find(c => c.id === activeService?.category);
   const activeServiceCategoryName = activeServiceCategoryObj ? (activeServiceCategoryObj.name || "").toLowerCase() : "";
-  const isVoucher = activeService?.category?.toLowerCase() === "voucher" || 
-                    activeService?.category?.toLowerCase().includes("voucher") ||
-                    activeServiceCategoryName.includes("voucher");
+  // Voucher items are treated as normal top-up services (no automated code dispatch or stock badges)
+  const isVoucher = false;
 
   const rawVouchersObj = activeService?.voucher_codes || {};
   const vouchersList = typeof rawVouchersObj === "object"
@@ -2061,46 +2063,34 @@ export default function App() {
 
                       {/* Display Dynamic Fields */}
                       <div className="space-y-4 text-xs font-mono">
-                        {isVoucher ? (
-                          <div className="space-y-3">
-                            <div className="p-4 bg-black/30 border border-zinc-900/70 rounded-2xl flex items-center justify-between">
-                              <span className="text-[10px] uppercase font-bold text-zinc-400">Voucher Stock Status</span>
-                              <span className={`font-orbitron font-black text-[11px] px-2.5 py-1 rounded-lg tracking-wider uppercase ${
-                                availableVouchersCount > 0
-                                  ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/30"
-                                  : "bg-red-950/45 text-red-500 border border-red-950"
-                              }`}>
-                                {availableVouchersCount > 0 ? `${availableVouchersCount} Available` : "Sold Out"}
-                              </span>
-                            </div>
+                        {((activeService.fields && activeService.fields.length > 0)
+                          ? activeService.fields
+                          : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }]
+                        ).map((f: any, fIdx: number) => (
+                          <div key={fIdx}>
+                            <label className="text-zinc-400 block mb-1.5">{f.label}</label>
+                            {f.type === "select" ? (
+                              <select
+                                value={fieldsState[f.key] || ""}
+                                onChange={(e) => setFieldsState({ ...fieldsState, [f.key]: e.target.value })}
+                                className="w-full bg-black/50 border border-zinc-900 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand-blue font-bold text-xs"
+                              >
+                                <option value="">-- Choose Option --</option>
+                                {f.options?.map((opt: string, oIdx: number) => (
+                                  <option key={oIdx} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type={f.type}
+                                placeholder={f.placeholder}
+                                value={fieldsState[f.key] || ""}
+                                onChange={(e) => setFieldsState({ ...fieldsState, [f.key]: e.target.value })}
+                                className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-4 py-3 rounded-xl focus:outline-none focus:border-brand-blue transition-all"
+                              />
+                            )}
                           </div>
-                        ) : (
-                          (activeService.fields || []).map((f, fIdx) => (
-                            <div key={fIdx}>
-                              <label className="text-zinc-400 block mb-1.5">{f.label}</label>
-                              {f.type === "select" ? (
-                                <select
-                                  value={fieldsState[f.key] || ""}
-                                  onChange={(e) => setFieldsState({ ...fieldsState, [f.key]: e.target.value })}
-                                  className="w-full bg-black/50 border border-zinc-900 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-brand-blue font-bold text-xs"
-                                >
-                                  <option value="">-- Choose Option --</option>
-                                  {f.options?.map((opt, oIdx) => (
-                                    <option key={oIdx} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <input
-                                  type={f.type}
-                                  placeholder={f.placeholder}
-                                  value={fieldsState[f.key] || ""}
-                                  onChange={(e) => setFieldsState({ ...fieldsState, [f.key]: e.target.value })}
-                                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-4 py-3 rounded-xl focus:outline-none focus:border-brand-blue transition-all"
-                                />
-                              )}
-                            </div>
-                          ))
-                        )}
+                        ))}
 
                         {/* USDT Dynamic Price Estimation Display */}
                         {activeService.id === "usdt" && fieldsState.cryptoAmount && fieldsState.txType && (

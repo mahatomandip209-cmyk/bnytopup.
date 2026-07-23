@@ -324,68 +324,70 @@ export default function HistorySection({
                     </div>
                   </div>
 
-                  {/* Middle Section: Voucher Box (if approved & codes exist) OR Requirements Area */}
-                  {order.status === "approved" && order.voucher_codes && order.voucher_codes.length > 0 ? (
-                    /* Voucher Code Box */
-                    <div className="border border-emerald-500/20 bg-emerald-50/50 rounded-2xl p-4 space-y-3">
-                      {/* Voucher Box Header */}
-                      <div className="flex justify-between items-center border-b border-emerald-500/10 pb-2">
-                        <span className="text-[11px] text-emerald-700 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                          <Key className="w-3.5 h-3.5 text-emerald-600" />
-                          YOUR VOUCHER CODE{order.voucher_codes.length > 1 ? `S (${order.voucher_codes.length})` : ""}
-                        </span>
-                        {order.voucher_codes.length > 1 && (
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(order.voucher_codes.join("\n"));
-                              alert("All voucher codes copied to clipboard!");
-                            }}
-                            className="text-[10px] text-emerald-600 hover:text-emerald-800 font-bold uppercase tracking-wider underline cursor-pointer"
-                          >
-                            COPY ALL
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Voucher Code Rows */}
-                      <div className="space-y-2">
-                        {order.voucher_codes.map((code: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2.5">
-                            {/* Index Badge */}
-                            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs flex-shrink-0">
-                              {idx + 1}
-                            </div>
-
-                            {/* Code Text Box */}
-                            <div className="flex-1 min-w-0 bg-white border border-zinc-200/80 rounded-xl px-3.5 py-2 text-zinc-900 font-mono text-xs font-bold tracking-wide shadow-sm truncate select-all">
-                              {code}
-                            </div>
-
-                            {/* Copy button */}
+                  {/* Middle Section: Voucher Box & Requirements Area */}
+                  <div className="space-y-3">
+                    {order.status === "approved" && order.voucher_codes && order.voucher_codes.length > 0 && (
+                      /* Voucher Code Box */
+                      <div className="border border-emerald-500/20 bg-emerald-50/50 rounded-2xl p-4 space-y-3">
+                        {/* Voucher Box Header */}
+                        <div className="flex justify-between items-center border-b border-emerald-500/10 pb-2">
+                          <span className="text-[11px] text-emerald-700 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                            <Key className="w-3.5 h-3.5 text-emerald-600" />
+                            YOUR VOUCHER CODE{order.voucher_codes.length > 1 ? `S (${order.voucher_codes.length})` : ""}
+                          </span>
+                          {order.voucher_codes.length > 1 && (
                             <button
                               onClick={() => {
-                                navigator.clipboard.writeText(code);
-                                alert("Voucher code copied: " + code);
+                                navigator.clipboard.writeText(order.voucher_codes.join("\n"));
+                                alert("All voucher codes copied to clipboard!");
                               }}
-                              className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors cursor-pointer shadow-sm flex-shrink-0"
-                              title="Copy Voucher Code"
+                              className="text-[10px] text-emerald-600 hover:text-emerald-800 font-bold uppercase tracking-wider underline cursor-pointer"
                             >
-                              <Copy className="w-4 h-4" />
+                              COPY ALL
                             </button>
-                          </div>
-                        ))}
+                          )}
+                        </div>
+
+                        {/* Voucher Code Rows */}
+                        <div className="space-y-2">
+                          {order.voucher_codes.map((code: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2.5">
+                              {/* Index Badge */}
+                              <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs flex-shrink-0">
+                                {idx + 1}
+                              </div>
+
+                              {/* Code Text Box */}
+                              <div className="flex-1 min-w-0 bg-white border border-zinc-200/80 rounded-xl px-3.5 py-2 text-zinc-900 font-mono text-xs font-bold tracking-wide shadow-sm truncate select-all">
+                                {code}
+                              </div>
+
+                              {/* Copy button */}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(code);
+                                  alert("Voucher code copied: " + code);
+                                }}
+                                className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors cursor-pointer shadow-sm flex-shrink-0"
+                                title="Copy Voucher Code"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    /* Show Order Requirements for custom categories, or if pending/rejected */
-                    (() => {
+                    )}
+
+                    {/* Show Order Requirements */}
+                    {(() => {
                       const reqs = getOrderRequirements(order);
                       if (reqs.length === 0) return null;
 
                       return (
                         <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 space-y-3">
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block border-b border-zinc-200/50 pb-1.5">
-                            📝 Submitted Information
+                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block border-b border-zinc-200/50 pb-1.5 flex items-center gap-1.5">
+                            📝 Submitted Requirements / Info
                           </span>
                           <div className="grid grid-cols-1 gap-2">
                             {reqs.map((req) => (
@@ -400,18 +402,19 @@ export default function HistorySection({
                                     navigator.clipboard.writeText(req.value);
                                     alert(`${req.label} copied: ${req.value}`);
                                   }}
-                                  className="text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer p-1.5 hover:bg-zinc-100 rounded-lg shrink-0"
+                                  className="text-zinc-600 hover:text-red-600 hover:bg-red-50 border border-zinc-200/80 bg-zinc-50 transition-all cursor-pointer px-2.5 py-1.5 rounded-lg shrink-0 flex items-center gap-1.5 text-[10px] font-extrabold uppercase shadow-xs"
                                   title={`Copy ${req.label}`}
                                 >
                                   <Copy className="w-3.5 h-3.5" />
+                                  <span>Copy</span>
                                 </button>
                               </div>
                             ))}
                           </div>
                         </div>
                       );
-                    })()
-                  )}
+                    })()}
+                  </div>
 
                   {/* Bottom Section: Footer (Price & Date/Time) */}
                   <div className="flex justify-between items-center border-t border-zinc-100 pt-3 text-xs">

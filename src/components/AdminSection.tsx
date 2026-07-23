@@ -1819,10 +1819,11 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                   navigator.clipboard.writeText(req.value);
                                   alert(`Copied ${req.label}: ${req.value}`);
                                 }}
-                                className="text-zinc-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-zinc-900 cursor-pointer flex-shrink-0"
+                                className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all px-2.5 py-1.5 rounded-lg cursor-pointer flex-shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
                                 title={`Copy ${req.label}`}
                               >
                                 <Copy className="w-3.5 h-3.5" />
+                                <span>Copy</span>
                               </button>
                             </div>
                           ));
