@@ -422,6 +422,13 @@ export default function App() {
     finalPrice: number;
   } | null>(null);
 
+  const [orderPlacedModal, setOrderPlacedModal] = useState<{
+    active: boolean;
+    gameName?: string;
+    packageName?: string;
+    orderId?: string;
+  } | null>(null);
+
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [nameModal, setNameModal] = useState(false);
   const [newNameInput, setNewNameInput] = useState("");
@@ -442,10 +449,13 @@ export default function App() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [dbBanners, setDbBanners] = useState<string[]>([]);
 
-  // Is Admin detection (Direct access enabled - login removed)
+  // Is Admin and Team Member detection
   const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
-  const isAdmin = true;
-  const isSupportStaff = false;
+  const userEmailLower = currentUser?.email?.trim().toLowerCase() || "";
+  const isMainAdmin = userEmailLower === "bnyshopadmin@hotmail.com" || userEmailLower === "bnyshopadminpanel@gmail.com" || userData?.role === "admin";
+  const isTeamMember = !isMainAdmin && dbTeamMembers.some(tm => tm.email?.trim().toLowerCase() === userEmailLower && tm.status === "Active");
+  const isAdmin = isMainAdmin || isTeamMember;
+  const isSupportStaff = isTeamMember;
 
   // Redirect support staff if on restricted views
   useEffect(() => {
@@ -622,6 +632,11 @@ export default function App() {
     const unsubscribeDb = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        if (data.deleted) {
+          alert("the account has been deleted");
+          signOut(auth);
+          return;
+        }
         if (data.blocked) {
           alert("Your account is currently blocked.");
           signOut(auth);
@@ -789,7 +804,21 @@ export default function App() {
     }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPass);
+      const res = await signInWithEmailAndPassword(auth, loginEmail, loginPass);
+      const userSnap = await get(ref(db, `users/${res.user.uid}`));
+      const uData = userSnap.val();
+      if (uData?.deleted) {
+        await signOut(auth);
+        setAuthError("the account has been deleted");
+        setLoading(false);
+        return;
+      }
+      if (uData?.blocked) {
+        await signOut(auth);
+        setAuthError("Your account is currently blocked.");
+        setLoading(false);
+        return;
+      }
       setAuthSuccess("Logged in successfully!");
     } catch (err: any) {
       setAuthError(err.message || "Login failed");
@@ -853,33 +882,67 @@ export default function App() {
     const emailTrimmed = (adminLoginEmail || "").trim().toLowerCase();
     const pass = adminLoginPassword || "";
 
-    if (emailTrimmed !== "bnyshopadminpanel@gmail.com" || pass !== "Bnyshopadmin01!") {
-      setAdminLoginError("Invalid credentials. Only the official BNY Admin can access this panel.");
+    const isMainAdminCreds = 
+      (emailTrimmed === "bnyshopadmin@hotmail.com" && pass === "Adminbny01!") ||
+      (emailTrimmed === "bnyshopadminpanel@gmail.com" && pass === "Bnyshopadmin01!");
+
+    const isTeamMemberEmail = dbTeamMembers.some(tm => tm.email?.trim().toLowerCase() === emailTrimmed && tm.status === "Active");
+
+    if (!isMainAdminCreds && !isTeamMemberEmail) {
+      setAdminLoginError("Invalid credentials. Please enter authorized admin/member email and password.");
       return;
     }
 
     setAdminLoginLoading(true);
     try {
-      // Sign in with Firebase
-      await signInWithEmailAndPassword(auth, "bnyshopadminpanel@gmail.com", "Bnyshopadmin01!");
-      setAdminLoginSuccess("Administrator authenticated successfully!");
-    } catch (err: any) {
-      // On-the-fly provisioning if the user account doesn't exist on standard/empty db
-      if (
-        err.code === "auth/user-not-found" || 
-        err.message?.includes("user-not-found") || 
-        err.code === "auth/invalid-credential" || 
-        err.message?.includes("invalid-credential")
-      ) {
+      if (isMainAdminCreds) {
         try {
-          await createUserWithEmailAndPassword(auth, "bnyshopadminpanel@gmail.com", "Bnyshopadmin01!");
-          setAdminLoginSuccess("Admin account auto-initialized and authenticated!");
-        } catch (regErr: any) {
-          setAdminLoginError("Authentication Failure: " + (regErr.message || "Failed to initialize Admin user."));
+          const res = await signInWithEmailAndPassword(auth, emailTrimmed, pass);
+          await update(ref(db, `users/${res.user.uid}`), {
+            name: "BNY Shop Admin",
+            email: emailTrimmed,
+            role: "admin"
+          });
+          setAdminLoginSuccess("Administrator authenticated successfully!");
+        } catch (err: any) {
+          if (
+            err.code === "auth/user-not-found" || 
+            err.message?.includes("user-not-found") || 
+            err.code === "auth/invalid-credential" || 
+            err.message?.includes("invalid-credential")
+          ) {
+            try {
+              const res = await createUserWithEmailAndPassword(auth, emailTrimmed, pass);
+              await set(ref(db, `users/${res.user.uid}`), {
+                name: "BNY Shop Admin",
+                email: emailTrimmed,
+                password: pass,
+                uniqueId: "BNY-ADMIN",
+                balance: 0,
+                role: "admin",
+                phone: "9800000000"
+              });
+              setAdminLoginSuccess("Admin account auto-initialized and authenticated!");
+            } catch (regErr: any) {
+              setAdminLoginError("Authentication Failure: " + (regErr.message || "Failed to initialize Admin user."));
+            }
+          } else {
+            setAdminLoginError(err.message || "Failed to authenticate.");
+          }
         }
       } else {
-        setAdminLoginError(err.message || "Failed to authenticate.");
+        // Team member login
+        const res = await signInWithEmailAndPassword(auth, emailTrimmed, pass);
+        const userSnap = await get(ref(db, `users/${res.user.uid}`));
+        if (userSnap.val()?.deleted) {
+          await signOut(auth);
+          setAdminLoginError("the account has been deleted");
+          return;
+        }
+        setAdminLoginSuccess("Authenticated as Team Member!");
       }
+    } catch (err: any) {
+      setAdminLoginError(err.message || "Failed to authenticate.");
     } finally {
       setAdminLoginLoading(false);
     }
@@ -1279,23 +1342,14 @@ export default function App() {
           finalPrice: finalPriceNPR
         });
       } else {
-        // Construct highly-polished WhatsApp notification text
-        const fieldsText = Object.keys(fieldsState)
-          .map(key => `🔸 *${key.toUpperCase()}:* ${fieldsState[key]}`)
-          .join("\n");
-
-        const msg = `🛒 *BNY SHOP NEW ORDER* 🚀\n\n` +
-                    `📦 *Product:* ${activeService.name}\n` +
-                    `💎 *Item:* ${finalPackageName}\n` +
-                    `💰 *Price:* NPR ${finalPriceNPR} (${convertAndFormatPrice(finalPriceNPR)})\n` +
-                    `👤 *User Name:* ${userData.name}\n` +
-                    `📧 *User Email:* ${currentUser.email}\n\n` +
-                    `📝 *Fulfillment Details:*\n${fieldsText}`;
-
         setSelectedPkg(null);
         setFieldsState({});
-        setActiveSection("home");
-        alert("Order placed successfully! It is now pending fulfillment by the Admin Desk.");
+        setOrderPlacedModal({
+          active: true,
+          gameName: activeService.name,
+          packageName: finalPackageName,
+          orderId: userOrderId || orderId
+        });
       }
     } catch (err: any) {
       alert(err.message || "Failed to submit order");
@@ -1353,10 +1407,11 @@ export default function App() {
         paymentMethod: depositMethod ? depositMethod.toUpperCase() : "ESEWA"
       });
 
-      // Reset fields
+      // Reset fields and redirect to Home
       setWalletAmt("");
       setEsewaTrx("");
       setDepositProofImage(null);
+      setActiveSection("home");
       alert("Deposit request submitted successfully! It has been sent to the Admin Panel for review.");
     } catch (err: any) {
       alert(err.message || "Failed to log deposit");
@@ -1401,12 +1456,12 @@ export default function App() {
         </div>
       )}
 
+      {/* ADMIN LOGIN SCREEN WHEN NOT ADMIN AUTHENTICATED */}
+      {activeSection === "admin" && !isAdmin && !authInitializing && renderAdminLogin()}
+
       {/* AUTH SCREEN VIEW */}
-      {!currentUser && !authInitializing && !isAdmin && (
-        activeSection === "admin" ? (
-          renderAdminLogin()
-        ) : (
-          <div id="auth-screen" className="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-[radial-gradient(circle_at_center,_#0b162c_0%,_#040810_100%)]">
+      {activeSection !== "admin" && !currentUser && !authInitializing && (
+        <div id="auth-screen" className="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-[radial-gradient(circle_at_center,_#0b162c_0%,_#040810_100%)]">
           <motion.div
             initial={{ y: -15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -1605,11 +1660,10 @@ export default function App() {
             )}
           </motion.div>
         </div>
-        )
       )}
 
       {/* MAIN APPLICATION INTERFACE */}
-      {(currentUser || isAdmin) && !authInitializing && (
+      {((activeSection === "admin" && isAdmin) || (activeSection !== "admin" && currentUser)) && !authInitializing && (
         <div id="app-content" className={`flex-1 flex flex-col w-full ${activeSection === "admin" && isAdmin ? "max-w-6xl" : "max-w-3xl"} mx-auto pb-24 shadow-2xl min-h-screen bg-bg-navy border-x border-zinc-900/40 transition-all duration-300`}>
           {/* Header Bar */}
           <header className="sticky top-0 bg-bg-navy/90 backdrop-blur-md px-5 py-4 flex justify-between items-center border-b border-red-600/20 z-50">
@@ -1982,6 +2036,7 @@ export default function App() {
                     openTopup={openTopup}
                     activeTab={profileActiveTab}
                     setActiveTab={setProfileActiveTab}
+                    isAdmin={isAdmin}
                   />
                 </motion.div>
               )}
@@ -2481,6 +2536,78 @@ export default function App() {
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl tracking-wider cursor-pointer transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]"
                 >
                   Order Detail
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Order Placed Success Modal */}
+      <AnimatePresence>
+        {orderPlacedModal && orderPlacedModal.active && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-[10000]">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm bg-[#080d1a] border border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.3)] rounded-3xl p-6 text-center space-y-5 relative"
+            >
+              {/* Pulse Indicator */}
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-950/40">
+                <span className="w-2 h-2 rounded-full animate-ping bg-emerald-400"></span>
+                <span className="text-[9px] font-mono font-extrabold uppercase tracking-widest text-emerald-400">SUCCESS</span>
+              </div>
+
+              {/* Icon */}
+              <div className="flex justify-center pt-2">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner flex items-center justify-center">
+                  <CheckCircle2 className="w-10 h-10 animate-pulse text-emerald-400" />
+                </div>
+              </div>
+
+              {/* Title & Product Info */}
+              <div className="space-y-1">
+                <h3 className="font-orbitron font-extrabold text-sm uppercase tracking-wider text-emerald-400">
+                  ORDER PLACED SUCCESSFULLY
+                </h3>
+                {orderPlacedModal.gameName && (
+                  <p className="text-[11px] text-zinc-400 font-mono">
+                    {orderPlacedModal.gameName} &bull; {orderPlacedModal.packageName}
+                  </p>
+                )}
+                <div className="w-10 h-0.5 mx-auto bg-emerald-500/40 rounded-full mt-2" />
+              </div>
+
+              {/* Message */}
+              <p className="text-zinc-300 text-xs font-mono font-medium leading-relaxed bg-black/50 border border-zinc-900/80 p-3.5 rounded-2xl">
+                Your order has been submitted and sent to the Admin Panel for review & fulfillment.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5 font-mono text-[11px] uppercase pt-1">
+                <button
+                  onClick={() => {
+                    setOrderPlacedModal(null);
+                    setActiveSection("home");
+                  }}
+                  className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-extrabold py-3.5 rounded-xl tracking-wider cursor-pointer transition-colors border border-zinc-800 flex items-center justify-center gap-2"
+                >
+                  <Home className="w-4 h-4 text-zinc-400" />
+                  RETURN TO HOME
+                </button>
+
+                <button
+                  onClick={() => {
+                    setOrderPlacedModal(null);
+                    setHistorySubTab("orders");
+                    setActiveSection("history");
+                  }}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 rounded-xl tracking-wider cursor-pointer transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2"
+                >
+                  <HistoryIcon className="w-4 h-4" />
+                  SEE HISTORY
                 </button>
               </div>
             </motion.div>

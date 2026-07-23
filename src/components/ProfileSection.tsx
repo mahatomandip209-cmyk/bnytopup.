@@ -52,6 +52,7 @@ export interface ProfileSectionProps {
   openTopup: (service: any) => void;
   activeTab: "menu" | "overview" | "favorites" | "notifications" | "support" | "refer" | "policies" | "settings";
   setActiveTab: (val: "menu" | "overview" | "favorites" | "notifications" | "support" | "refer" | "policies" | "settings") => void;
+  isAdmin?: boolean;
 }
 
 export default function ProfileSection({
@@ -72,7 +73,8 @@ export default function ProfileSection({
   setActiveSection,
   openTopup,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  isAdmin
 }: ProfileSectionProps) {
   // Selected policy active subtab
   const [activePolicy, setActivePolicy] = useState<"terms" | "refund" | "cancellation" | "privacy">("terms");
@@ -83,7 +85,7 @@ export default function ProfileSection({
 
   // List of navigation items for the left side menu
   interface NavItem {
-    id: "overview" | "favorites" | "notifications" | "support" | "refer" | "policies";
+    id: "overview" | "favorites" | "notifications" | "refer" | "policies";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
@@ -93,7 +95,6 @@ export default function ProfileSection({
     { id: "overview", label: "Overview", icon: UserIcon },
     { id: "favorites", label: "Favorites", icon: Heart },
     { id: "notifications", label: "Notices", icon: Bell, badge: systemNotifications.length },
-    { id: "support", label: "Support Chat", icon: MessageSquare, badge: userTickets.filter(t => t.status === "open").length },
     { id: "refer", label: "Refer & Earn", icon: Gift },
     { id: "policies", label: "Policies", icon: FileText }
   ];
@@ -147,9 +148,20 @@ export default function ProfileSection({
             <h2 className="font-orbitron text-lg font-bold tracking-wide text-white uppercase">Profile</h2>
           </div>
           
-          <div className="flex items-center gap-1.5 bg-red-950/40 text-red-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-900/40">
-            <ShieldCheck className="w-3.5 h-3.5 animate-pulse" />
-            <span>VERIFIED PLAYER</span>
+          <div className="flex items-center gap-2">
+            {isAdmin && setActiveSection && (
+              <button
+                onClick={() => setActiveSection("admin")}
+                className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-500 transition-all cursor-pointer shadow-md"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>ADMIN PANEL</span>
+              </button>
+            )}
+            <div className="flex items-center gap-1.5 bg-red-950/40 text-red-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-900/40">
+              <ShieldCheck className="w-3.5 h-3.5 animate-pulse" />
+              <span>VERIFIED PLAYER</span>
+            </div>
           </div>
         </div>
 
@@ -236,23 +248,6 @@ export default function ProfileSection({
               <div className="min-w-0">
                 <h4 className="font-bold text-white text-xs group-hover:text-red-500 transition-colors">Favorites</h4>
                 <p className="text-[11px] text-zinc-500 truncate mt-0.5">Your favorite games</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors flex-shrink-0" />
-          </div>
-
-          {/* Support Chat */}
-          <div
-            onClick={() => setActiveTab("support")}
-            className="group bg-[#121212]/80 border border-zinc-900/80 hover:border-zinc-800/80 hover:bg-zinc-900/20 rounded-2xl p-4 flex justify-between items-center cursor-pointer transition-all duration-200"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="bg-emerald-500/10 text-emerald-500 p-3 rounded-2xl flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-white text-xs group-hover:text-emerald-500 transition-colors">Support Chat</h4>
-                <p className="text-[11px] text-zinc-500 truncate mt-0.5">Chat with our team</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors flex-shrink-0" />
@@ -625,121 +620,6 @@ export default function ProfileSection({
                       </div>
                     ))
                   )}
-                </div>
-              </motion.div>
-            )}
-
-            {/* 5. SUPPORT TAB CONTENT */}
-            {activeTab === "support" && (
-              <motion.div
-                key="support"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-5"
-              >
-                <div>
-                  <h3 className="font-orbitron text-md font-bold text-red-500 uppercase tracking-widest">
-                    Support Desk
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">
-                    Submit verified support ticket claims regarding order delivery, refunds, or wallet balance
-                  </p>
-                </div>
-
-                <form onSubmit={submitSupportTicket} className="bg-[#121212]/50 border border-zinc-900 p-4 rounded-xl space-y-4">
-                  <div>
-                    <h4 className="font-orbitron font-bold text-red-500 text-xs uppercase tracking-widest border-b border-zinc-900 pb-2">
-                      CREATE INQUIRY CLAIM
-                    </h4>
-                  </div>
-
-                  <div className="space-y-3.5 text-xs">
-                    <div>
-                      <label className="text-[10px] text-zinc-400 block mb-1 uppercase tracking-wider font-bold">
-                        Subject Topic
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Free Fire order ORD-FF-839A not credited"
-                        value={supportTopic}
-                        onChange={(e) => setSupportTopic(e.target.value)}
-                        className="w-full bg-black border border-zinc-800 text-white placeholder-zinc-700 px-3.5 py-2.5 rounded-lg focus:outline-none focus:border-red-600 transition-all font-mono text-xs"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] text-zinc-400 block mb-1 uppercase tracking-wider font-bold">
-                        Detailed Message
-                      </label>
-                      <textarea
-                        placeholder="Please supply your transaction reference slip screenshots details, player unique coordinates, and order reference."
-                        value={supportMessage}
-                        rows={3}
-                        onChange={(e) => setSupportMessage(e.target.value)}
-                        className="w-full bg-black border border-zinc-800 text-white placeholder-zinc-700 px-3.5 py-2.5 rounded-lg focus:outline-none focus:border-red-600 transition-all text-xs leading-relaxed"
-                        required
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-red-600 hover:bg-red-500 transition-all text-white font-bold py-2.5 rounded-lg text-xs tracking-wider cursor-pointer border border-red-500 flex items-center justify-center gap-1.5"
-                    >
-                      {loading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          SUBMIT SECURE HELP CLAIM
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-
-                {/* Tickets list */}
-                <div className="space-y-3">
-                  <h4 className="font-orbitron font-bold text-zinc-500 text-[10px] uppercase tracking-widest pl-1">
-                    MY TICKETS HISTORY ({userTickets.length})
-                  </h4>
-                  <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1 no-scrollbar">
-                    {userTickets.length === 0 ? (
-                      <p className="text-zinc-600 text-[11px] italic text-center py-6 bg-[#121212]/10 rounded-xl border border-zinc-900">
-                        No support tickets submitted previously.
-                      </p>
-                    ) : (
-                      userTickets.map((ticket) => (
-                        <div
-                          key={ticket.id}
-                          className="bg-[#121212]/30 border border-zinc-900 p-3 rounded-xl text-xs space-y-2 hover:border-zinc-800 transition-colors"
-                        >
-                          <div className="flex justify-between items-center gap-4">
-                            <span className="font-bold text-white truncate font-orbitron">{ticket.topic}</span>
-                            {ticket.status === "resolved" ? (
-                              <span className="bg-emerald-950/40 text-emerald-500 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-900/40">
-                                RESOLVED
-                              </span>
-                            ) : (
-                              <span className="bg-amber-950/40 text-amber-500 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-amber-900/40 animate-pulse">
-                                OPEN
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-zinc-400 text-[11px] leading-relaxed font-mono bg-black/40 p-2.5 rounded-lg border border-zinc-900">
-                            {ticket.message}
-                          </p>
-                          <div className="flex justify-between items-center text-[10px] text-zinc-600 font-mono pt-1">
-                            <span>Ref ID: #{ticket.id.slice(1, 6).toUpperCase()}</span>
-                            <span>{new Date(ticket.timestamp).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
                 </div>
               </motion.div>
             )}

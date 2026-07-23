@@ -181,9 +181,11 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   const [editTeamPhone, setEditTeamPhone] = useState("");
   const [editTeamStatus, setEditTeamStatus] = useState<"Active" | "Inactive">("Active");
 
-  // Determine if logged-in user is Support Staff
-  const isSupportStaff = currentUser?.email !== "bnyshopadminpanel@gmail.com" &&
-    teamMembers.some(tm => tm.email === currentUser?.email?.trim().toLowerCase() && tm.status === "Active");
+  // Determine if logged-in user is Main Admin or Support Staff
+  const userEmailLower = currentUser?.email?.trim().toLowerCase() || "";
+  const isMainAdmin = userEmailLower === "bnyshopadmin@hotmail.com" || userEmailLower === "bnyshopadminpanel@gmail.com";
+  const isSupportStaff = !isMainAdmin &&
+    teamMembers.some(tm => tm.email?.trim().toLowerCase() === userEmailLower && tm.status === "Active");
 
   // Restrict access for Support Staff
   useEffect(() => {
@@ -563,6 +565,21 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
         alert(`User is now ${nextState ? "BLOCKED" : "ACTIVE"}`);
       } catch (err: any) {
         alert(err.message);
+      }
+    }
+  };
+
+  // Delete user account permanently
+  const deleteUserAccount = async (user: any) => {
+    if (await confirmAction(`Are you sure you want to PERMANENTLY DELETE the user account for "${user.name}" (${user.email})? This user account will be deleted and logged out immediately.`)) {
+      try {
+        await update(ref(db, `users/${user.uid}`), {
+          deleted: true,
+          deletedAt: Date.now()
+        });
+        alert(`User account for ${user.name} has been deleted successfully.`);
+      } catch (err: any) {
+        alert("Failed to delete user: " + (err.message || err));
       }
     }
   };
@@ -2117,6 +2134,13 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                           }`}
                         >
                           {u.blocked ? "BLOCKED" : "BLOCK"}
+                        </button>
+                        <button
+                          onClick={() => deleteUserAccount(u)}
+                          className="flex-1 sm:flex-none px-3 py-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 hover:text-red-300 text-[10px] font-mono tracking-widest uppercase font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          DELETE
                         </button>
                       </div>
                     </div>
