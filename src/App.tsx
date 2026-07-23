@@ -596,18 +596,18 @@ export default function App() {
       }
     });
 
-    // Fetch user orders history (both standard UID orders and custom forms)
-    const ordersRef = ref(db, "all_orders");
-    const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
+    // Fetch user orders history
+    const userOrdersRef = ref(db, `orders/${currentUser.uid}`);
+    const unsubscribeOrders = onValue(userOrdersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const list = Object.keys(data)
           .map(key => ({
             id: key,
+            orderId: key,
             ...data[key]
           }))
-          .filter(order => order.uid === currentUser.uid)
-          .sort((a, b: any) => b.timestamp - a.timestamp);
+          .sort((a, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
         setUserOrders(list);
       } else {
         setUserOrders([]);
@@ -1029,7 +1029,13 @@ export default function App() {
 
   // Place order for any of the 10 services
   const submitOrder = async () => {
-    if (!activeService || !currentUser || !userData) return;
+    if (!activeService) return;
+    if (!currentUser || !userData) {
+      alert("Please log in or create an account first to place an order.");
+      setActiveSection("profile");
+      setProfileActiveTab("menu");
+      return;
+    }
 
     // Retrieve final price (checks customizable db fallback prices)
     let finalPriceNPR = 0;
@@ -1188,9 +1194,10 @@ export default function App() {
         orderId,
         userOrderId,
         uid: currentUser.uid,
-        email: currentUser.email,
-        uniqueId: userData.uniqueId,
+        email: currentUser.email || userData.email || "",
+        uniqueId: userData.uniqueId || "",
         game: activeService.name,
+        gameImage: activeService.image || "",
         packageName: finalPackageName,
         price: finalPriceNPR,
         quantity: activeService.id === "usdt" ? 1 : quantity,

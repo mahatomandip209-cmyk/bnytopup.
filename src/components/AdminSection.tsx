@@ -1712,123 +1712,152 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     <p className="text-zinc-500 font-mono text-xs">No orders match the current filters.</p>
                   </div>
                 ) : (
-                  filteredOrders.map(order => (
-                    <div key={order.orderId} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
-                      {/* Header Details */}
-                      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider">
-                              {order.game}
-                            </span>
-                            <strong className="text-white text-base font-sans">{order.packageName}</strong>
+                  filteredOrders.map(order => {
+                    const getDisplayOrderId = (o: any) => {
+                      const targetId = o.orderId || o.userOrderId || o.id || "";
+                      if (targetId.startsWith("BNY-")) {
+                        const suffix = targetId.slice(4);
+                        if (/^\d{6}$/.test(suffix)) {
+                          return targetId;
+                        }
+                        const cleanDigits = suffix.replace(/\D/g, "");
+                        if (cleanDigits.length >= 6) {
+                          return `BNY-${cleanDigits.slice(0, 6)}`;
+                        } else {
+                          return `BNY-${cleanDigits.padEnd(6, "0")}`;
+                        }
+                      }
+                      let hash = 0;
+                      const cleanStr = targetId.replace(/[^A-Za-z0-9]/g, "");
+                      for (let i = 0; i < cleanStr.length; i++) {
+                        hash = (hash * 31 + cleanStr.charCodeAt(i)) % 1000000;
+                      }
+                      const numStr = String(Math.abs(hash)).padStart(6, "0");
+                      return `BNY-${numStr}`;
+                    };
+                    const oid = getDisplayOrderId(order);
+
+                    const matchedGame = dbGames.find((g: any) => g.name === order.game || g.id === order.game) || servicesData.find((s: any) => s.name === order.game || s.id === order.game);
+                    const logoUrl = order.gameImage || matchedGame?.image || "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg";
+
+                    return (
+                      <div key={order.orderId || order.id} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
+                        {/* Header Details */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-zinc-900/60">
+                          {/* Game Name & Logo & User Email */}
+                          <div className="space-y-3 min-w-0 flex-1">
+                            {/* Game Logo & Game Name */}
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={logoUrl}
+                                alt={order.game || "Game"}
+                                className="w-12 h-12 rounded-2xl object-cover border border-zinc-800 shadow-sm shrink-0"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider inline-block mb-1">
+                                  {order.game || "Service"}
+                                </span>
+                                <h4 className="text-white text-base font-sans font-black truncate">{order.packageName}</h4>
+                              </div>
+                            </div>
+
+                            {/* Gamer Email */}
+                            <div className="text-xs font-mono text-zinc-300 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-zinc-900 w-fit max-w-full truncate">
+                              <span className="text-zinc-500 uppercase font-bold text-[10px] shrink-0">Email:</span>
+                              <span className="font-bold text-zinc-200 select-all truncate">{order.email || order.customerEmail || "N/A"}</span>
+                            </div>
+
+                            <div className="text-[10px] text-zinc-500 font-mono">
+                              Date: {new Date(order.timestamp).toLocaleString()}
+                            </div>
                           </div>
-                          <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-1.5 flex-wrap">
-                            <span>Date: {new Date(order.timestamp).toLocaleString()}</span>
-                            <span>&bull;</span>
-                            <span>Order ID:</span>
+                          
+                          {/* Top Corner Order ID, Status, & Price/Quantity */}
+                          <div className="text-left sm:text-right flex-shrink-0 space-y-2.5">
+                            {/* Order ID in Top Corner */}
+                            <div className="font-mono text-xs font-black text-zinc-300 bg-black/60 border border-zinc-800 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-inner">
+                              <span className="text-zinc-500 text-[9px] uppercase tracking-wider font-extrabold">ORDER ID:</span>
+                              <span className="text-red-400 tracking-wider select-all">{oid}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(oid);
+                                  alert(`Copied Order ID: ${oid}`);
+                                }}
+                                className="text-zinc-400 hover:text-white transition-colors cursor-pointer p-1 rounded-lg hover:bg-zinc-800 inline-flex items-center justify-center border border-zinc-800"
+                                title="Copy Order ID"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Status Badge in exact requested colors */}
+                            <div className="flex sm:justify-end">
+                              <span className={`inline-block text-[10px] font-black uppercase font-mono px-3 py-1 rounded-full border ${
+                                order.status === "approved"
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                  : order.status === "rejected"
+                                  ? "bg-red-500/10 text-red-400 border-red-500/30"
+                                  : "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"
+                              }`}>
+                                {order.status === "approved" ? "COMPLETED" : order.status === "rejected" ? "REJECTED" : "PENDING"}
+                              </span>
+                            </div>
+
+                            {/* Package Price & Quantity */}
+                            <div className="text-left sm:text-right">
+                              <div className="text-emerald-400 font-mono text-base font-black">NPR {order.price}</div>
+                              <div className="text-zinc-400 font-mono text-[11px]">
+                                Quantity: <span className="text-white font-bold">{order.quantity || 1}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Order Requirements details block - Below Package & Quantity */}
+                        <div className="space-y-2">
+                          <div className="text-[10px] uppercase tracking-wider font-extrabold font-mono text-zinc-400">
+                            📋 Submitted Requirements / Info:
+                          </div>
+                          <div className="bg-black/30 border border-zinc-900/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono text-zinc-400">
                             {(() => {
-                              const getDisplayOrderId = (o: any) => {
-                                const targetId = o.orderId || o.id || "";
-                                if (targetId.startsWith("BNY-")) {
-                                  const suffix = targetId.slice(4);
-                                  if (/^\d{6}$/.test(suffix)) {
-                                    return targetId;
-                                  }
-                                  const cleanDigits = suffix.replace(/\D/g, "");
-                                  if (cleanDigits.length >= 6) {
-                                    return `BNY-${cleanDigits.slice(0, 6)}`;
-                                  } else {
-                                    return `BNY-${cleanDigits.padEnd(6, "0")}`;
-                                  }
-                                }
-                                // Convert string to a deterministic 6-digit number
-                                let hash = 0;
-                                const cleanStr = targetId.replace(/[^A-Za-z0-9]/g, "");
-                                for (let i = 0; i < cleanStr.length; i++) {
-                                  hash = (hash * 31 + cleanStr.charCodeAt(i)) % 1000000;
-                                }
-                                const numStr = String(Math.abs(hash)).padStart(6, "0");
-                                return `BNY-${numStr}`;
-                              };
-                              const oid = getDisplayOrderId(order);
-                              return (
-                                <>
-                                  <span className="text-zinc-400 font-bold">{oid}</span>
+                              const reqs = getOrderRequirements(order);
+                              if (reqs.length === 0) {
+                                return (
+                                  <div className="col-span-full text-center py-2 text-zinc-600 text-[11px]">
+                                    No requirements submitted for this order
+                                  </div>
+                                );
+                              }
+                              return reqs.map((req) => (
+                                <div key={req.label} className="flex items-center justify-between gap-2 bg-black/60 border border-zinc-900 rounded-xl p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
+                                      {req.label}
+                                    </span>
+                                    <strong className="text-white text-xs select-all block truncate font-mono">
+                                      {req.value}
+                                    </strong>
+                                  </div>
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigator.clipboard.writeText(oid);
-                                      alert(`Copied Order ID: ${oid}`);
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(req.value);
+                                      alert(`Copied ${req.label}: ${req.value}`);
                                     }}
-                                    className="text-zinc-500 hover:text-red-500 transition-colors cursor-pointer p-1 rounded hover:bg-zinc-900 inline-flex items-center justify-center"
-                                    title="Copy Order ID"
+                                    className="text-zinc-300 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all px-2.5 py-1.5 rounded-lg cursor-pointer flex-shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider shadow-xs"
+                                    title={`Copy ${req.label}`}
                                   >
                                     <Copy className="w-3.5 h-3.5" />
+                                    <span>Copy</span>
                                   </button>
-                                </>
-                              );
+                                </div>
+                              ));
                             })()}
                           </div>
                         </div>
-                        
-                        {/* Price & Quantity & Status badges */}
-                        <div className="text-left sm:text-right flex-shrink-0 space-y-1">
-                          <div className="text-zinc-500 text-[10px] uppercase tracking-wider font-extrabold font-mono">Total Price</div>
-                          <strong className="text-emerald-500 font-mono text-base block">NPR {order.price}</strong>
-                          <div className="text-zinc-400 font-mono text-[11px]">
-                            Qty: <span className="text-white font-bold">{order.quantity || 1}</span>
-                          </div>
-                          <span className={`inline-block text-[9px] font-bold uppercase font-mono px-2 py-0.5 rounded-full mt-1 ${
-                            order.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : order.status === "rejected" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse"
-                          }`}>
-                            {order.status === "approved" ? "completed" : order.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Customer Email info */}
-                      <div className="border-t border-zinc-900/60 pt-3">
-                        <div className="text-zinc-500 text-[9px] uppercase tracking-wider font-extrabold font-mono">Gamer Account Email</div>
-                        <strong className="text-zinc-200 font-mono text-sm block mt-0.5 select-all">{order.email}</strong>
-                      </div>
-
-                      {/* Order Requirements details block */}
-                      <div className="bg-black/20 border border-zinc-900/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono text-zinc-400">
-                        {(() => {
-                          const reqs = getOrderRequirements(order);
-                          if (reqs.length === 0) {
-                            return (
-                              <div className="col-span-full text-center py-2 text-zinc-600 text-[11px]">
-                                No requirements submitted for this order
-                              </div>
-                            );
-                          }
-                          return reqs.map((req) => (
-                            <div key={req.label} className="flex items-center justify-between gap-2 bg-black/40 border border-zinc-900/60 rounded-xl p-2.5">
-                              <div className="min-w-0 flex-1">
-                                <span className="text-zinc-600 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
-                                  {req.label}
-                                </span>
-                                <strong className="text-white text-xs select-all block truncate">
-                                  {req.value}
-                                </strong>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(req.value);
-                                  alert(`Copied ${req.label}: ${req.value}`);
-                                }}
-                                className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all px-2.5 py-1.5 rounded-lg cursor-pointer flex-shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
-                                title={`Copy ${req.label}`}
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copy</span>
-                              </button>
-                            </div>
-                          ));
-                        })()}
-                      </div>
 
                       {/* Voucher Codes Section */}
                       {order.voucher_codes && order.voucher_codes.length > 0 && (
@@ -1894,8 +1923,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                         </div>
                       )}
                     </div>
-                  ))
-                )}
+                  );
+                })
+              )}
               </div>
             </div>
           </div>

@@ -271,43 +271,53 @@ export default function HistorySection({
                   key={order.id}
                   className="bg-white border border-zinc-200/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300 text-zinc-950"
                 >
-                  {/* Top Section: Game Name, Product Name, Qty & Status Pill / Order ID on Right */}
+                  {/* Top Section: Game Logo, Game Name, Product Name, Qty & Status Pill / Order ID on Right */}
                   <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1 min-w-0">
-                      {/* Game Name */}
-                      <h4 className="font-sans font-bold text-xs text-blue-600 tracking-wide uppercase">
-                        {order.game}
-                      </h4>
+                    <div className="flex items-center gap-3 min-w-0">
+                      {order.gameImage ? (
+                        <img
+                          src={order.gameImage}
+                          alt={order.game || "Game"}
+                          className="w-11 h-11 rounded-xl object-cover border border-zinc-200 shrink-0 shadow-xs"
+                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                        />
+                      ) : null}
+                      <div className="space-y-0.5 min-w-0">
+                        {/* Game Name */}
+                        <h4 className="font-sans font-bold text-xs text-blue-600 tracking-wide uppercase">
+                          {order.game}
+                        </h4>
 
-                      {/* Product Name */}
-                      <h3 className="font-sans font-extrabold text-base text-zinc-900 tracking-tight">
-                        {order.packageName}
-                      </h3>
+                        {/* Product Name */}
+                        <h3 className="font-sans font-extrabold text-base text-zinc-900 tracking-tight">
+                          {order.packageName}
+                        </h3>
 
-                      {/* Quantity & Type */}
-                      <p className="text-zinc-500 font-medium text-xs">
-                        Qty: {order.quantity || 1} &bull; {order.category === "voucher_code" ? "wallet" : "direct topup"}
-                      </p>
+                        {/* Quantity & Type */}
+                        <p className="text-zinc-500 font-medium text-xs">
+                          Qty: {order.quantity || 1} &bull; {order.category === "voucher_code" ? "wallet" : "direct topup"}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Status Pill & Order ID on Top Right */}
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       {order.status === "approved" ? (
-                        <span className="inline-flex items-center justify-center px-4 py-1.5 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full tracking-wider uppercase">
+                        <span className="inline-flex items-center justify-center px-3.5 py-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full tracking-wider uppercase">
                           COMPLETED
                         </span>
                       ) : order.status === "rejected" ? (
-                        <span className="inline-flex items-center justify-center px-4 py-1.5 text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-100 rounded-full tracking-wider uppercase">
+                        <span className="inline-flex items-center justify-center px-3.5 py-1 text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-200 rounded-full tracking-wider uppercase">
                           REJECTED
                         </span>
                       ) : (
-                        <span className="inline-flex items-center justify-center px-4 py-1.5 text-[10px] font-extrabold text-yellow-600 bg-yellow-50 border border-yellow-100 rounded-full tracking-wider uppercase animate-pulse">
+                        <span className="inline-flex items-center justify-center px-3.5 py-1 text-[10px] font-extrabold text-yellow-600 bg-yellow-50 border border-yellow-200 rounded-full tracking-wider uppercase animate-pulse">
                           PENDING
                         </span>
                       )}
 
                       {/* Order ID with Copy button */}
-                      <div className="font-mono text-[11px] font-extrabold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 bg-zinc-50 border border-zinc-200/60 px-2.5 py-1 rounded-lg">
+                      <div className="font-mono text-[11px] font-extrabold text-zinc-600 uppercase tracking-wider flex items-center gap-1.5 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-lg shadow-2xs">
                         <span>{trackingId}</span>
                         <button
                           onClick={(e) => {
