@@ -43,60 +43,58 @@ export function getOrderRequirements(order: any): Array<{ label: string; value: 
       return;
     }
 
+    const strVal = String(val).trim();
+    if (!strVal) return;
+
     reqs.push({
       label: label
         .replace(/([A-Z])/g, ' $1')
         .replace(/[_-]/g, ' ')
         .trim()
         .replace(/^\w/, (c) => c.toUpperCase()),
-      value: String(val)
+      value: strVal
     });
   };
 
-  if (order.submitted_requirements) {
+  const hasSubmitted = order.submitted_requirements && typeof order.submitted_requirements === "object" && Object.keys(order.submitted_requirements).length > 0;
+  const hasReqs = order.requirements && typeof order.requirements === "object" && Object.keys(order.requirements).length > 0;
+
+  if (hasSubmitted) {
     addVal("Submitted Requirements", order.submitted_requirements);
-  }
-
-  if (order.requirements) {
+  } else if (hasReqs) {
     addVal("Requirements", order.requirements);
+  } else {
+    if (order.playerUid) addVal("Player UID", order.playerUid);
+    if (order.customerEmail) addVal("Customer Game Email", order.customerEmail);
+    if (order.customerPassword) addVal("Activation Password", order.customerPassword);
+    if (order.whatsappNumber) addVal("Contact WhatsApp", order.whatsappNumber);
   }
-
-  if (order.playerUid) addVal("Player UID", order.playerUid);
-  if (order.customerEmail) addVal("Customer Game Email", order.customerEmail);
-  if (order.customerPassword) addVal("Activation Password", order.customerPassword);
-  if (order.whatsappNumber) addVal("Contact WhatsApp", order.whatsappNumber);
-
-  const standardKeys = [
-    "orderId",
-    "userOrderId",
-    "uid",
-    "email",
-    "uniqueId",
-    "game",
-    "packageName",
-    "price",
-    "quantity",
-    "status",
-    "timestamp",
-    "voucher_codes",
-    "playerUid",
-    "customerEmail",
-    "customerPassword",
-    "whatsappNumber",
-    "submitted_requirements",
-    "requirements"
-  ];
-
-  Object.keys(order).forEach((key) => {
-    if (!standardKeys.includes(key) && !key.toLowerCase().includes("email")) {
-      addVal(key, order[key]);
-    }
-  });
 
   const seenLabels = new Set<string>();
   const uniqueReqs: Array<{ label: string; value: string }> = [];
+
   reqs.forEach(r => {
-    const normLabel = r.label.toLowerCase().replace(/\s+/g, "");
+    const normLabel = r.label.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const lowerVal = r.value.toLowerCase();
+
+    // Ignore game image, base64 strings, order ids, etc.
+    if (
+      normLabel.includes("gameimage") ||
+      normLabel.includes("image") ||
+      normLabel.includes("logo") ||
+      normLabel.includes("icon") ||
+      normLabel.includes("banner") ||
+      normLabel.includes("photo") ||
+      normLabel === "id" ||
+      normLabel === "orderid" ||
+      normLabel === "userorderid" ||
+      normLabel === "uniqueid" ||
+      lowerVal.startsWith("data:image/") ||
+      (lowerVal.startsWith("http") && (lowerVal.includes(".jpg") || lowerVal.includes(".png") || lowerVal.includes(".jpeg") || lowerVal.includes(".webp")))
+    ) {
+      return;
+    }
+
     if (!seenLabels.has(normLabel)) {
       seenLabels.add(normLabel);
       uniqueReqs.push(r);
@@ -271,33 +269,23 @@ export default function HistorySection({
                   key={order.id}
                   className="bg-white border border-zinc-200/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300 text-zinc-950"
                 >
-                  {/* Top Section: Game Logo, Game Name, Product Name, Qty & Status Pill / Order ID on Right */}
+                  {/* Top Section: Game Name, Product Name, Qty & Status Pill / Order ID on Right */}
                   <div className="flex justify-between items-start gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {order.gameImage ? (
-                        <img
-                          src={order.gameImage}
-                          alt={order.game || "Game"}
-                          className="w-11 h-11 rounded-xl object-cover border border-zinc-200 shrink-0 shadow-xs"
-                          onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                        />
-                      ) : null}
-                      <div className="space-y-0.5 min-w-0">
-                        {/* Game Name */}
-                        <h4 className="font-sans font-bold text-xs text-blue-600 tracking-wide uppercase">
-                          {order.game}
-                        </h4>
+                    <div className="space-y-0.5 min-w-0">
+                      {/* Game Name */}
+                      <h4 className="font-sans font-bold text-xs text-blue-600 tracking-wide uppercase">
+                        {order.game}
+                      </h4>
 
-                        {/* Product Name */}
-                        <h3 className="font-sans font-extrabold text-base text-zinc-900 tracking-tight">
-                          {order.packageName}
-                        </h3>
+                      {/* Product Name */}
+                      <h3 className="font-sans font-extrabold text-base text-zinc-900 tracking-tight">
+                        {order.packageName}
+                      </h3>
 
-                        {/* Quantity & Type */}
-                        <p className="text-zinc-500 font-medium text-xs">
-                          Qty: {order.quantity || 1} &bull; {order.category === "voucher_code" ? "wallet" : "direct topup"}
-                        </p>
-                      </div>
+                      {/* Quantity & Type */}
+                      <p className="text-zinc-500 font-medium text-xs">
+                        Qty: {order.quantity || 1} &bull; {order.category === "voucher_code" ? "wallet" : "direct topup"}
+                      </p>
                     </div>
 
                     {/* Status Pill & Order ID on Top Right */}

@@ -53,7 +53,8 @@ import {
   DollarSign,
   Phone,
   Gift,
-  Ticket
+  Ticket,
+  X
 } from "lucide-react";
 import { auth, db } from "./firebase";
 import { UserData } from "./types";
@@ -64,7 +65,64 @@ import HistorySection from "./components/HistorySection";
 import AdminSection from "./components/AdminSection";
 
 export default function App() {
-  // Splash & Initialization State
+  // Global Toast Notification state
+  const [toastNotification, setToastNotification] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  useEffect(() => {
+    let timer: any = null;
+    const handleToastEvent = (e: any) => {
+      if (e.detail && e.detail.message) {
+        if (timer) clearTimeout(timer);
+        setToastNotification({
+          message: e.detail.message,
+          type: e.detail.type || "success"
+        });
+        timer = setTimeout(() => {
+          setToastNotification(null);
+        }, 3500);
+      }
+    };
+    window.addEventListener("show-toast", handleToastEvent);
+
+    // Override browser alert with smooth top toast banner
+    const originalAlert = window.alert;
+    window.alert = (msg: string) => {
+      if (!msg) return;
+      const lower = msg.toLowerCase();
+      let type: "success" | "error" | "info" = "info";
+      if (
+        lower.includes("success") ||
+        lower.includes("added") ||
+        lower.includes("updated") ||
+        lower.includes("copied") ||
+        lower.includes("dispatched") ||
+        lower.includes("approved") ||
+        lower.includes("reset") ||
+        lower.includes("cleared") ||
+        lower.includes("delivered") ||
+        lower.includes("created")
+      ) {
+        type = "success";
+      } else if (
+        lower.includes("error") ||
+        lower.includes("failed") ||
+        lower.includes("required") ||
+        lower.includes("invalid") ||
+        lower.includes("rejected") ||
+        lower.includes("decline") ||
+        lower.includes("blocked")
+      ) {
+        type = "error";
+      }
+      window.dispatchEvent(new CustomEvent("show-toast", { detail: { message: msg, type } }));
+    };
+
+    return () => {
+      window.removeEventListener("show-toast", handleToastEvent);
+      window.alert = originalAlert;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<(UserData & { avatarId?: string; phone?: string; country?: string; referralCode?: string }) | null>(null);
@@ -1067,10 +1125,8 @@ export default function App() {
       finalPriceNPR = basePrice * quantity;
       finalPackageName = quantity > 1 ? `${selectedPkg.n} (Qty: ${quantity})` : selectedPkg.n;
 
-      // Validate dynamic fields based on configurations (or fallback default requirements)
-      const fieldsToValidate = (activeService.fields && activeService.fields.length > 0)
-        ? activeService.fields
-        : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }];
+      // Validate dynamic fields based on configurations
+      const fieldsToValidate = activeService.fields || [];
 
       for (const f of fieldsToValidate) {
         if (!fieldsState[f.key]) {
@@ -1092,9 +1148,7 @@ export default function App() {
 
     // Build human-readable submitted requirements
     const submitted_requirements: Record<string, string> = {};
-    const fieldsToCollect = (activeService.fields && activeService.fields.length > 0)
-      ? activeService.fields
-      : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }];
+    const fieldsToCollect = activeService.fields || [];
 
     fieldsToCollect.forEach((f: any) => {
       if (fieldsState[f.key]) {
@@ -1208,15 +1262,12 @@ export default function App() {
         ...(isVoucher ? { voucher_codes: assignedVouchers.map(v => v.code) } : {})
       };
 
-      const updates: any = {};
-      updates[`all_orders/${orderId}`] = orderPayload;
-      updates[`orders/${currentUser.uid}/${userOrderId}`] = orderPayload;
+      await set(ref(db, `all_orders/${orderId}`), orderPayload);
+      await set(ref(db, `orders/${currentUser.uid}/${userOrderId}`), orderPayload);
 
       if (isVoucher && updatedVoucherCodesMap) {
-        updates[`games/${activeService.id}/voucher_codes`] = updatedVoucherCodesMap;
+        await set(ref(db, `games/${activeService.id}/voucher_codes`), updatedVoucherCodesMap);
       }
-
-      await update(ref(db), updates);
 
       if (isVoucher) {
         setVoucherSuccessModal({
@@ -2070,10 +2121,7 @@ export default function App() {
 
                       {/* Display Dynamic Fields */}
                       <div className="space-y-4 text-xs font-mono">
-                        {((activeService.fields && activeService.fields.length > 0)
-                          ? activeService.fields
-                          : [{ label: "Player UID / Account Info", placeholder: "e.g. 5839218392 or Account Email", type: "text", key: "playerUid" }]
-                        ).map((f: any, fIdx: number) => (
+                        {(activeService.fields || []).map((f: any, fIdx: number) => (
                           <div key={fIdx}>
                             <label className="text-zinc-400 block mb-1.5">{f.label}</label>
                             {f.type === "select" ? (
@@ -2596,6 +2644,56 @@ export default function App() {
                 aria-label="Close"
               >
                 <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Top Professional Floating Toast Notification Banner */}
+        {toastNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -60, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -60, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[10000] max-w-md w-[92%] sm:w-auto pointer-events-auto"
+          >
+            <div
+              className={`px-4 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-xl ${
+                toastNotification.type === "success"
+                  ? "bg-[#091120]/95 border-emerald-500/50 text-emerald-300 shadow-emerald-950/40"
+                  : toastNotification.type === "error"
+                  ? "bg-[#091120]/95 border-red-500/50 text-red-300 shadow-red-950/40"
+                  : "bg-[#091120]/95 border-blue-500/50 text-blue-300 shadow-blue-950/40"
+              }`}
+            >
+              <div
+                className={`p-2 rounded-xl shrink-0 ${
+                  toastNotification.type === "success"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : toastNotification.type === "error"
+                    ? "bg-red-500/20 text-red-400"
+                    : "bg-blue-500/20 text-blue-400"
+                }`}
+              >
+                {toastNotification.type === "success" ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : toastNotification.type === "error" ? (
+                  <XCircle className="w-5 h-5" />
+                ) : (
+                  <Info className="w-5 h-5" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 pr-1">
+                <p className="text-xs font-mono font-extrabold tracking-wide text-white leading-snug">
+                  {toastNotification.message}
+                </p>
+              </div>
+              <button
+                onClick={() => setToastNotification(null)}
+                className="text-zinc-500 hover:text-white p-1 rounded-lg transition-colors cursor-pointer shrink-0 hover:bg-zinc-800/60"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
           </motion.div>

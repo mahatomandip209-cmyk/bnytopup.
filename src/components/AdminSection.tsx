@@ -74,60 +74,58 @@ export function getOrderRequirements(order: any): Array<{ label: string; value: 
       return;
     }
 
+    const strVal = String(val).trim();
+    if (!strVal) return;
+
     reqs.push({
       label: label
         .replace(/([A-Z])/g, ' $1')
         .replace(/[_-]/g, ' ')
         .trim()
         .replace(/^\w/, (c) => c.toUpperCase()),
-      value: String(val)
+      value: strVal
     });
   };
 
-  if (order.submitted_requirements) {
+  const hasSubmitted = order.submitted_requirements && typeof order.submitted_requirements === "object" && Object.keys(order.submitted_requirements).length > 0;
+  const hasReqs = order.requirements && typeof order.requirements === "object" && Object.keys(order.requirements).length > 0;
+
+  if (hasSubmitted) {
     addVal("Submitted Requirements", order.submitted_requirements);
-  }
-
-  if (order.requirements) {
+  } else if (hasReqs) {
     addVal("Requirements", order.requirements);
+  } else {
+    if (order.playerUid) addVal("Player UID", order.playerUid);
+    if (order.customerEmail) addVal("Customer Game Email", order.customerEmail);
+    if (order.customerPassword) addVal("Activation Password", order.customerPassword);
+    if (order.whatsappNumber) addVal("Contact WhatsApp", order.whatsappNumber);
   }
-
-  if (order.playerUid) addVal("Player UID", order.playerUid);
-  if (order.customerEmail) addVal("Customer Game Email", order.customerEmail);
-  if (order.customerPassword) addVal("Activation Password", order.customerPassword);
-  if (order.whatsappNumber) addVal("Contact WhatsApp", order.whatsappNumber);
-
-  const standardKeys = [
-    "orderId",
-    "userOrderId",
-    "uid",
-    "email",
-    "uniqueId",
-    "game",
-    "packageName",
-    "price",
-    "quantity",
-    "status",
-    "timestamp",
-    "voucher_codes",
-    "playerUid",
-    "customerEmail",
-    "customerPassword",
-    "whatsappNumber",
-    "submitted_requirements",
-    "requirements"
-  ];
-
-  Object.keys(order).forEach((key) => {
-    if (!standardKeys.includes(key) && !key.toLowerCase().includes("email")) {
-      addVal(key, order[key]);
-    }
-  });
 
   const seenLabels = new Set<string>();
   const uniqueReqs: Array<{ label: string; value: string }> = [];
+
   reqs.forEach(r => {
-    const normLabel = r.label.toLowerCase().replace(/\s+/g, "");
+    const normLabel = r.label.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const lowerVal = r.value.toLowerCase();
+
+    // Ignore game image, base64 strings, order ids, etc.
+    if (
+      normLabel.includes("gameimage") ||
+      normLabel.includes("image") ||
+      normLabel.includes("logo") ||
+      normLabel.includes("icon") ||
+      normLabel.includes("banner") ||
+      normLabel.includes("photo") ||
+      normLabel === "id" ||
+      normLabel === "orderid" ||
+      normLabel === "userorderid" ||
+      normLabel === "uniqueid" ||
+      lowerVal.startsWith("data:image/") ||
+      (lowerVal.startsWith("http") && (lowerVal.includes(".jpg") || lowerVal.includes(".png") || lowerVal.includes(".jpeg") || lowerVal.includes(".webp")))
+    ) {
+      return;
+    }
+
     if (!seenLabels.has(normLabel)) {
       seenLabels.add(normLabel);
       uniqueReqs.push(r);
@@ -1746,22 +1744,12 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-zinc-900/60">
                           {/* Game Name & Logo & User Email */}
                           <div className="space-y-3 min-w-0 flex-1">
-                            {/* Game Logo & Game Name */}
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={logoUrl}
-                                alt={order.game || "Game"}
-                                className="w-12 h-12 rounded-2xl object-cover border border-zinc-800 shadow-sm shrink-0"
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = "none";
-                                }}
-                              />
-                              <div className="min-w-0">
-                                <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider inline-block mb-1">
-                                  {order.game || "Service"}
-                                </span>
-                                <h4 className="text-white text-base font-sans font-black truncate">{order.packageName}</h4>
-                              </div>
+                            {/* Game Name */}
+                            <div className="space-y-1">
+                              <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider inline-block mb-1">
+                                {order.game || "Service"}
+                              </span>
+                              <h4 className="text-white text-base font-sans font-black truncate">{order.packageName}</h4>
                             </div>
 
                             {/* Gamer Email */}

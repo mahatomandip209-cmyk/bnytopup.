@@ -478,6 +478,26 @@ export async function set(refObj: DatabaseReference, data: any) {
 export async function update(refObj: DatabaseReference, data: any) {
   const path = refObj.path;
 
+  if (data && typeof data === "object") {
+    const keys = Object.keys(data);
+    const hasSlashes = keys.some(k => k.includes("/"));
+    if (path === "" || hasSlashes) {
+      for (const [key, val] of Object.entries(data)) {
+        const fullPath = path ? `${path}/${key}` : key;
+        triggerLocalUpdate(fullPath, val);
+        try {
+          const targetRef = getFirestoreRef(fullPath);
+          if (targetRef instanceof DocumentReference) {
+            await setDoc(targetRef, val, { merge: true });
+          }
+        } catch (err) {
+          console.warn("Error updating multi-path ref:", fullPath, err);
+        }
+      }
+      return;
+    }
+  }
+
   // Merge with existing local cache if possible and update
   try {
     const cacheKey = `rtdb_cache:${path}`;
