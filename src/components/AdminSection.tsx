@@ -40,7 +40,8 @@ import {
   Ticket,
   Copy,
   UserPlus,
-  Shield
+  Shield,
+  Sparkles
 } from "lucide-react";
 import { ServiceItem, GamePackage, servicesData } from "../data/packages";
 
@@ -221,6 +222,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
   // Product modal state
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [pastedGameList, setPastedGameList] = useState("");
 
   // Search filter inputs
   const [searchQuery, setSearchQuery] = useState("");
@@ -866,10 +868,68 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
       await update(ref(db, `games/${selectedProductGameId}`), { packages: updatedPkgs });
       setNewPackageName("");
       setNewPackagePrice("");
+      setPastedGameList("");
       setIsAddProductModalOpen(false);
       alert("Product package added successfully!");
     } catch (err: any) {
       alert("Error adding package: " + err.message);
+    }
+  };
+
+  // Detect and Batch Add Products from Pasted List
+  const handleDetectAndAddProducts = async () => {
+    if (!selectedProductGameId) {
+      alert("Please select a game first");
+      return;
+    }
+    if (!pastedGameList.trim()) {
+      alert("Please paste a game list first");
+      return;
+    }
+
+    const lines = pastedGameList.split("\n");
+    const detectedItems: GamePackage[] = [];
+
+    for (let rawLine of lines) {
+      let cleanLine = rawLine.trim();
+      if (!cleanLine) continue;
+
+      // Regex to find price pattern at the end or preceded by RS/NPR/Rs./₹/$/=/:-
+      const priceMatch = cleanLine.match(/(?:(?:rs\.?|npr|nrs|₹|\$|=|-|:)\s*)?(\d+(?:\.\d+)?)\s*(?:rs\.?|npr|nrs|\/\-)?\s*$/i);
+      
+      if (priceMatch) {
+        const priceVal = parseFloat(priceMatch[1]);
+        if (!isNaN(priceVal) && priceVal >= 0) {
+          let namePart = cleanLine.substring(0, priceMatch.index).trim();
+          namePart = namePart.replace(/(?:\s*(?:-|=|\:|rs\.?|npr|nrs|₹|\$)\s*)+$/i, '').trim();
+          if (namePart) {
+            detectedItems.push({
+              n: namePart,
+              p: priceVal
+            });
+          }
+        }
+      }
+    }
+
+    if (detectedItems.length === 0) {
+      alert("Could not detect any products or prices from the pasted text. Please check the format (e.g., '💎 115 Diamonds - Rs 110').");
+      return;
+    }
+
+    const gameObj = dbGames.find(g => g.id === selectedProductGameId);
+    const existingPackages = gameObj?.packages ? [...gameObj.packages] : [];
+    const updatedPkgs = [...existingPackages, ...detectedItems];
+
+    try {
+      await update(ref(db, `games/${selectedProductGameId}`), { packages: updatedPkgs });
+      setPastedGameList("");
+      setNewPackageName("");
+      setNewPackagePrice("");
+      setIsAddProductModalOpen(false);
+      alert(`Successfully detected and added ${detectedItems.length} product(s) to ${gameObj?.name || "game"}!`);
+    } catch (err: any) {
+      alert("Error adding detected products: " + err.message);
     }
   };
 
@@ -2802,6 +2862,36 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                     onChange={(e) => setNewPackagePrice(e.target.value)}
                                     className="w-full bg-black border border-zinc-900 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500 font-sans text-xs"
                                   />
+                                </div>
+
+                                {/* Paste Game List Option (Optional) */}
+                                <div className="pt-3 border-t border-zinc-900 space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <label className="text-zinc-400 block uppercase text-[9px] font-bold tracking-wider">
+                                      Paste Game List (Optional)
+                                    </label>
+                                    <span className="text-[9px] text-emerald-400 font-mono flex items-center gap-1">
+                                      <Sparkles className="w-2.5 h-2.5" /> Auto-Detect
+                                    </span>
+                                  </div>
+                                  <textarea
+                                    rows={3}
+                                    placeholder={`Paste list here...\ne.g.\n💎 115 Diamonds - Rs 110\n🔥 240 Diamonds = RS 220\n355 Diamonds - NPR 330`}
+                                    value={pastedGameList}
+                                    onChange={(e) => setPastedGameList(e.target.value)}
+                                    className="w-full bg-black border border-zinc-900 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 font-mono text-[11px] leading-relaxed resize-none"
+                                  />
+
+                                  {pastedGameList.trim() && (
+                                    <button
+                                      type="button"
+                                      onClick={handleDetectAndAddProducts}
+                                      className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase font-mono tracking-wider cursor-pointer transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+                                    >
+                                      <Sparkles className="w-3.5 h-3.5" />
+                                      Detect & Add Products
+                                    </button>
+                                  )}
                                 </div>
                               </div>
 
