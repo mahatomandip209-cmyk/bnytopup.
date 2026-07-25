@@ -1680,22 +1680,6 @@ export default function App() {
             </div>
           </header>
 
-          {quotaExceeded && (
-            <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-5 py-2.5 flex items-center justify-between gap-3 text-xs text-yellow-500 animate-fade-in font-sans">
-              <div className="flex items-center gap-2">
-                <span className="text-base">⚠️</span>
-                <span>Real-time Cloud syncing is temporarily paused. High-speed local cache mode is active — your transactions and order history remain fully secure.</span>
-              </div>
-              <button 
-                onClick={() => setQuotaExceeded(false)}
-                className="text-yellow-500 hover:text-yellow-400 font-bold px-2 py-1 border border-yellow-500/20 rounded hover:bg-yellow-500/5 transition-all text-[10px] uppercase cursor-pointer shrink-0"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-
           {/* Dynamic home slider only shows in home section */}
           {activeSection === "home" && (
             dbBanners.length === 0 ? (

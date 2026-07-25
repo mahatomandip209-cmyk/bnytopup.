@@ -1291,10 +1291,18 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   // ---------------- COMPUTING STATS ----------------
   const totalSales = allOrders
     .filter(o => o.status === "approved")
-    .reduce((acc, curr) => acc + (curr.price ?? 0), 0);
+    .reduce((acc, curr) => {
+      const rawPrice = curr.price ?? curr.amount ?? 0;
+      const numPrice = typeof rawPrice === "number"
+        ? rawPrice
+        : parseFloat(String(rawPrice).replace(/[^0-9.]/g, "")) || 0;
+      return acc + numPrice;
+    }, 0);
 
   const pendingDepositsCount = allDeposits.filter(d => d.status === "pending").length;
   const pendingOrdersCount = allOrders.filter(o => o.status === "pending").length;
+  const totalOrdersCount = allOrders.length;
+  const totalUsersCount = allUsers.filter(u => !u.deleted).length;
 
   // Filters for lists
   const filteredUsers = allUsers.filter(u =>
@@ -1543,38 +1551,47 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
             {/* STATISTICS ROW */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Total Sales Card */}
-              <div className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-emerald-500/30 hover:shadow-[0_10px_30px_rgba(16,185,129,0.05)] transition-all duration-300">
+              <div 
+                onClick={() => { setAdminTab("orders"); setOrderFilter("approved"); }}
+                className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-emerald-500/50 hover:bg-emerald-950/10 cursor-pointer hover:shadow-[0_10px_30px_rgba(16,185,129,0.08)] transition-all duration-300 group"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-zinc-500 block uppercase font-mono font-extrabold tracking-wider">Total Sales</span>
-                  <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                  <span className="text-[10px] text-zinc-500 group-hover:text-emerald-400 block uppercase font-mono font-extrabold tracking-wider transition-colors">Total Sales</span>
+                  <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 group-hover:scale-110 transition-transform">
                     <TrendingUp className="w-5 h-5 text-emerald-500" />
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black font-mono text-emerald-500 tracking-tight">NPR {totalSales}</p>
+                  <p className="text-2xl font-black font-mono text-emerald-500 tracking-tight">NPR {totalSales.toLocaleString()}</p>
                   <span className="text-[8px] text-emerald-600 block font-mono uppercase font-bold mt-1">From approved dispatches</span>
                 </div>
               </div>
 
               {/* Total Orders Card */}
-              <div className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-zinc-700 hover:shadow-[0_10px_30px_rgba(255,255,255,0.02)] transition-all duration-300">
+              <div 
+                onClick={() => { setAdminTab("orders"); setOrderFilter("all"); }}
+                className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-zinc-500 hover:bg-zinc-900/20 cursor-pointer hover:shadow-[0_10px_30px_rgba(255,255,255,0.04)] transition-all duration-300 group"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-zinc-500 block uppercase font-mono font-extrabold tracking-wider">Total Orders</span>
-                  <div className="p-2 bg-zinc-800/40 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 block uppercase font-mono font-extrabold tracking-wider transition-colors">Total Orders</span>
+                  <div className="p-2 bg-zinc-800/40 rounded-xl border border-zinc-800 group-hover:scale-110 transition-transform">
                     <ClipboardList className="w-5 h-5 text-white" />
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black font-mono text-white tracking-tight">{allOrders.length}</p>
+                  <p className="text-2xl font-black font-mono text-white tracking-tight">{totalOrdersCount}</p>
                   <span className="text-[8px] text-zinc-500 block font-mono uppercase font-bold mt-1">Total system logs</span>
                 </div>
               </div>
 
               {/* Pending Deposits Card */}
-              <div className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between relative overflow-hidden hover:border-blue-500/30 hover:shadow-[0_10px_30px_rgba(59,130,246,0.05)] transition-all duration-300">
+              <div 
+                onClick={() => { setAdminTab("deposits"); setDepositFilter("pending"); }}
+                className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between relative overflow-hidden hover:border-blue-500/50 hover:bg-blue-950/10 cursor-pointer hover:shadow-[0_10px_30px_rgba(59,130,246,0.08)] transition-all duration-300 group"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-zinc-500 block uppercase font-mono font-extrabold tracking-wider">Pending Deposits</span>
-                  <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                  <span className="text-[10px] text-zinc-500 group-hover:text-blue-400 block uppercase font-mono font-extrabold tracking-wider transition-colors">Pending Deposits</span>
+                  <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:scale-110 transition-transform">
                     <Wallet className="w-5 h-5 text-blue-400" />
                   </div>
                 </div>
@@ -1588,10 +1605,13 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
               </div>
 
               {/* Pending Orders Card */}
-              <div className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between relative overflow-hidden hover:border-red-500/30 hover:shadow-[0_10px_30px_rgba(239,68,68,0.05)] transition-all duration-300">
+              <div 
+                onClick={() => { setAdminTab("orders"); setOrderFilter("pending"); }}
+                className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between relative overflow-hidden hover:border-red-500/50 hover:bg-red-950/10 cursor-pointer hover:shadow-[0_10px_30px_rgba(239,68,68,0.08)] transition-all duration-300 group"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-zinc-500 block uppercase font-mono font-extrabold tracking-wider">Pending Orders</span>
-                  <div className="p-2 bg-red-500/10 rounded-xl border border-red-500/20">
+                  <span className="text-[10px] text-zinc-500 group-hover:text-red-400 block uppercase font-mono font-extrabold tracking-wider transition-colors">Pending Orders</span>
+                  <div className="p-2 bg-red-500/10 rounded-xl border border-red-500/20 group-hover:scale-110 transition-transform">
                     <ShoppingCart className="w-5 h-5 text-red-500" />
                   </div>
                 </div>
@@ -1605,16 +1625,19 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
               </div>
 
               {/* Total Users Card */}
-              <div className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-purple-500/30 hover:shadow-[0_10px_30px_rgba(168,85,247,0.05)] transition-all duration-300">
+              <div 
+                onClick={() => setAdminTab("users")}
+                className="bg-black/40 p-6 border border-zinc-900/80 rounded-3xl space-y-4 flex flex-col justify-between hover:border-purple-500/50 hover:bg-purple-950/10 cursor-pointer hover:shadow-[0_10px_30px_rgba(168,85,247,0.08)] transition-all duration-300 group"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-zinc-500 block uppercase font-mono font-extrabold tracking-wider">Total Users</span>
-                  <div className="p-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                  <span className="text-[10px] text-zinc-500 group-hover:text-purple-400 block uppercase font-mono font-extrabold tracking-wider transition-colors">Total Users</span>
+                  <div className="p-2 bg-purple-500/10 rounded-xl border border-purple-500/20 group-hover:scale-110 transition-transform">
                     <Users className="w-5 h-5 text-purple-400" />
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-black font-mono text-purple-400 tracking-tight">{allUsers.length}</p>
-                  <span className="text-[8px] text-zinc-500 block font-mono uppercase font-bold mt-1">Gamer userbase</span>
+                  <p className="text-2xl font-black font-mono text-purple-400 tracking-tight">{totalUsersCount}</p>
+                  <span className="text-[8px] text-zinc-500 block font-mono uppercase font-bold mt-1">Active gamer userbase</span>
                 </div>
               </div>
             </div>
