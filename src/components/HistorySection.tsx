@@ -479,16 +479,16 @@ export default function HistorySection({
                       <p className="font-mono font-bold text-emerald-500 text-xs">RS {dep.amount}</p>
 
                       {dep.status === "approved" ? (
-                        <span className="flex items-center gap-1 text-emerald-500 text-[9px] font-bold uppercase tracking-wider">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> APPROVED
                         </span>
                       ) : dep.status === "rejected" ? (
-                        <span className="flex items-center gap-1 text-red-500 text-[9px] font-bold uppercase tracking-wider">
-                          <XCircle className="w-3.5 h-3.5" /> REJECTED
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/15 border border-red-500/40 text-red-400 text-[10px] font-extrabold uppercase tracking-wider shadow-[0_0_12px_rgba(239,68,68,0.25)]">
+                          <XCircle className="w-3.5 h-3.5 text-red-400" /> REJECTED
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-amber-500 text-[9px] font-bold uppercase tracking-wider animate-pulse">
-                          <Clock className="w-3.5 h-3.5" /> VERIFYING
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[10px] font-extrabold uppercase tracking-wider animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" /> PENDING
                         </span>
                       )}
                     </div>

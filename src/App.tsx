@@ -63,6 +63,7 @@ import Logo from "./components/Logo";
 import ProfileSection from "./components/ProfileSection";
 import HistorySection from "./components/HistorySection";
 import AdminSection from "./components/AdminSection";
+import { DepositStepper } from "./components/DepositStepper";
 
 export default function App() {
   // Global Toast Notification state
@@ -1850,120 +1851,24 @@ export default function App() {
                     </h1>
                   </div>
 
-                  {/* QR Code and Account Details Block */}
-                  <div className="bg-card-bg p-6 rounded-3xl border border-zinc-900 flex flex-col items-center space-y-4 shadow-md">
-                    <h4 className="font-orbitron font-extrabold text-xs text-red-500 uppercase tracking-widest filter drop-shadow-[0_0_5px_rgba(239,68,68,0.4)]">
-                      eSewa Direct Payment QR
-                    </h4>
-
-                    <div className="bg-white p-2.5 rounded-2xl border-4 border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.45)] aspect-square w-52 h-52 flex items-center justify-center relative overflow-hidden">
-                      <img
-                        id="qr-display"
-                        src={paymentSettings.qrCode} // eSewa QR
-                        alt="Payment QR Code"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-
-                    {/* Remarks and Policy Info */}
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 w-full max-w-xs text-center space-y-1">
-                      <p className="text-[11px] font-black text-red-500 tracking-wider font-mono">
-                        REMARKS: BILL PAYMENTS
-                      </p>
-                      <p className="text-[11px] font-black text-red-500 tracking-wider font-mono">
-                        NO THRID PARTY
-                      </p>
-                    </div>
-
-                    <div className="text-center space-y-1.5 font-mono w-full max-w-xs">
-                      <p className="text-zinc-400 text-[10px] uppercase tracking-wider font-extrabold">
-                        Account Coordinates
-                      </p>
-                      <div className="flex items-center justify-center gap-2 mt-1 bg-black/40 py-2 px-3 rounded-xl border border-zinc-900">
-                        <b className="text-red-500 text-base tracking-wider filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
-                          {paymentSettings.esewaNum}
-                        </b>
-                        <button
-                          onClick={() => copyToClipboard(paymentSettings.esewaNum, "esewa")}
-                          className="bg-zinc-900 hover:bg-zinc-800 p-1.5 rounded-lg text-red-500 hover:text-white border border-zinc-800 cursor-pointer transition-colors shadow-[0_0_8px_rgba(220,38,38,0.2)]"
-                          title="Copy ID"
-                        >
-                          {copiedEsewa ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {copiedEsewa && (
-                        <p className="text-emerald-500 text-[10px] font-bold uppercase tracking-wider animate-pulse font-sans">
-                          ID Copied to clipboard!
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Deposit Form with File Upload */}
-                  <div className="bg-card-bg p-6 rounded-3xl border border-zinc-900 space-y-5 shadow-md">
-                    <h3 className="font-orbitron font-extrabold text-xs text-red-500 uppercase tracking-widest border-b border-zinc-900 pb-2.5 filter drop-shadow-[0_0_8px_rgba(239,68,68,0.55)]">
-                      SUBMIT TRANSACTION PROOF
-                    </h3>
-
-                    <div className="space-y-4 text-xs font-mono">
-                      <div>
-                        <label className="text-zinc-400 block mb-1 uppercase font-bold text-[10px]">Deposit Amount (NPR)</label>
-                        <input
-                          type="number"
-                          placeholder=""
-                          value={walletAmt}
-                          onChange={(e) => setWalletAmt(e.target.value)}
-                          className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-4 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all shadow-inner"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-zinc-400 block mb-1.5 uppercase font-bold text-[10px]">Upload Image Proof (PNG or JPG Only)</label>
-                        <div className="relative border border-dashed border-zinc-800 rounded-xl p-4 bg-black/20 hover:border-red-600/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/png, image/jpeg, image/jpg"
-                            onChange={handleImageUpload}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          />
-                          {depositProofImage ? (
-                            <div className="space-y-2 text-center w-full">
-                              <div className="mx-auto max-h-32 max-w-[180px] overflow-hidden rounded-lg border border-zinc-800">
-                                <img
-                                  src={depositProofImage}
-                                  alt="Proof Preview"
-                                  className="w-full h-auto object-cover"
-                                />
-                              </div>
-                              <p className="text-[10px] text-emerald-500 font-extrabold uppercase tracking-wider">✓ Image Selected Successfully</p>
-                            </div>
-                          ) : (
-                            <div className="text-center py-2 space-y-1">
-                              <span className="text-xl">📷</span>
-                              <p className="text-[10px] text-zinc-500 uppercase font-extrabold tracking-wider">Click or Drag to Select Screenshot</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={submitDeposit}
-                        disabled={loading}
-                        className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 active:scale-[0.98] text-white transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2.5 cursor-pointer border border-red-600/40 mt-2 shadow-[0_0_15px_rgba(220,38,38,0.3)] filter drop-shadow-[0_0_5px_rgba(220,38,38,0.25)]"
-                      >
-                        {loading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-white" />
-                            SUBMIT DEPOSIT PROOF
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  {/* Multi-Step Deposit Stepper Component */}
+                  <DepositStepper
+                    depositMethod={depositMethod}
+                    setDepositMethod={setDepositMethod}
+                    walletAmt={walletAmt}
+                    setWalletAmt={setWalletAmt}
+                    esewaTrx={esewaTrx}
+                    setEsewaTrx={setEsewaTrx}
+                    depositProofImage={depositProofImage}
+                    handleImageUpload={handleImageUpload}
+                    setDepositProofImage={setDepositProofImage}
+                    submitDeposit={submitDeposit}
+                    loading={loading}
+                    paymentSettings={paymentSettings}
+                    copyToClipboard={copyToClipboard}
+                    copiedEsewa={copiedEsewa}
+                    convertAndFormatPrice={convertAndFormatPrice}
+                  />
                 </motion.div>
               )}
 
