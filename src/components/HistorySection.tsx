@@ -237,7 +237,7 @@ export default function HistorySection({
               </button>
             </div>
           ) : (
-            userOrders.map((order) => {
+            userOrders.map((order, orderIdx) => {
               const getDisplayOrderId = (o: any) => {
                 const targetId = o.orderId || o.id || "";
                 if (targetId.startsWith("BNY-")) {
@@ -266,7 +266,7 @@ export default function HistorySection({
 
               return (
                 <div
-                  key={order.id}
+                  key={order.id ? `${order.id}-${orderIdx}` : `order-${orderIdx}`}
                   className="bg-white border border-zinc-200/80 rounded-3xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all duration-300 text-zinc-950"
                 >
                   {/* Top Section: Game Name, Product Name, Qty & Status Pill / Order ID on Right */}
@@ -388,8 +388,8 @@ export default function HistorySection({
                             📝 Submitted Requirements / Info
                           </span>
                           <div className="grid grid-cols-1 gap-2">
-                            {reqs.map((req) => (
-                              <div key={req.label} className="bg-white border border-zinc-200/60 p-2.5 px-3.5 rounded-xl font-mono text-xs flex justify-between items-center gap-4 shadow-sm">
+                            {reqs.map((req, reqIdx) => (
+                              <div key={req.label ? `${req.label}-${reqIdx}` : `req-${reqIdx}`} className="bg-white border border-zinc-200/60 p-2.5 px-3.5 rounded-xl font-mono text-xs flex justify-between items-center gap-4 shadow-sm">
                                 <div className="space-y-0.5 min-w-0 flex-1">
                                   <span className="text-[9px] text-zinc-400 block uppercase font-bold">{req.label}</span>
                                   <span className="text-zinc-950 font-extrabold tracking-wide break-all">{req.value}</span>
@@ -448,12 +448,12 @@ export default function HistorySection({
               </button>
             </div>
           ) : (
-            userDeposits.map((dep) => {
+            userDeposits.map((dep, depIdx) => {
               const isExpanded = expandedDeposit === dep.id;
 
               return (
                 <div
-                  key={dep.id}
+                  key={dep.id ? `${dep.id}-${depIdx}` : `dep-${depIdx}`}
                   className={`bg-[#121212]/40 border rounded-2xl overflow-hidden transition-all duration-300 ${
                     isExpanded ? "border-emerald-600/50 shadow-[0_0_15px_rgba(16,185,129,0.05)] bg-[#121212]/80" : "border-zinc-900 hover:border-zinc-800"
                   }`}

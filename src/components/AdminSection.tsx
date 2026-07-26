@@ -1690,8 +1690,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     <p className="text-zinc-500 font-mono text-xs">No deposits match current filter.</p>
                   </div>
                 ) : (
-                  filteredDeposits.map(dep => (
-                    <div key={dep.depositId} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl flex flex-col justify-between">
+                  filteredDeposits.map((dep, idx) => (
+                    <div key={dep.depositId ? `${dep.depositId}-${idx}` : `dep-${idx}`} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl flex flex-col justify-between">
                       <div className="space-y-4">
                         <div className="flex justify-between items-start gap-4">
                           <div>
@@ -1818,7 +1818,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     <p className="text-zinc-500 font-mono text-xs">No orders match the current filters.</p>
                   </div>
                 ) : (
-                  filteredOrders.map(order => {
+                  filteredOrders.map((order, idx) => {
                     const getDisplayOrderId = (o: any) => {
                       const targetId = o.orderId || o.userOrderId || o.id || "";
                       if (targetId.startsWith("BNY-")) {
@@ -1847,7 +1847,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                     const logoUrl = order.gameImage || matchedGame?.image || "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg";
 
                     return (
-                      <div key={order.orderId || order.id} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
+                      <div key={order.orderId || order.id ? `${order.orderId || order.id}-${idx}` : `order-${idx}`} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
                         {/* Header Details */}
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-zinc-900/60">
                           {/* Game Name & Logo & User Email */}
@@ -2076,9 +2076,9 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                   <p className="text-zinc-500 font-mono text-xs">No deposits match current filter.</p>
                 </div>
               ) : (
-                filteredDeposits.map(dep => {
+                filteredDeposits.map((dep, idx) => {
                   return (
-                    <div key={dep.depositId} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
+                    <div key={dep.depositId ? `${dep.depositId}-${idx}` : `dep-${idx}`} className="bg-[#0c1322] border border-zinc-900 hover:border-zinc-800 rounded-3xl p-6 space-y-4 transition-all duration-300 shadow-xl">
                       <div className="flex justify-between items-start gap-4">
                         <div>
                           <span className="text-zinc-500 text-[10px] uppercase tracking-wider font-extrabold block">Gamer Email</span>
@@ -3551,7 +3551,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                         </h4>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {(gameObj.packages || []).map((pkg: any) => {
+                          {(gameObj.packages || []).map((pkg: any, idx: number) => {
                             const availableCount = codesList.filter((c: any) => 
                               (c.status === "available" || !c.status) && c.packageName === pkg.n
                             ).length;
@@ -3561,7 +3561,7 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
                             return (
                               <div
-                                key={pkg.n}
+                                key={pkg.n ? `${pkg.n}-${idx}` : `pkg-${idx}`}
                                 onClick={() => {
                                   setSelectedVoucherPackageName(pkg.n);
                                   setVoucherTextArea("");

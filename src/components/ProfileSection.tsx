@@ -598,9 +598,9 @@ export default function ProfileSection({
                       No system notifications at the moment.
                     </p>
                   ) : (
-                    systemNotifications.map((notif) => (
+                    systemNotifications.map((notif, idx) => (
                       <div
-                        key={notif.id}
+                        key={notif.id ? `${notif.id}-${idx}` : `notif-${idx}`}
                         className="bg-[#121212]/40 border border-zinc-900 hover:border-zinc-800 p-4 rounded-xl space-y-2.5 transition-all relative overflow-hidden shadow-sm"
                       >
                         {notif.type === "warning" && <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>}

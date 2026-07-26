@@ -267,7 +267,7 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
                     const statusKey = dep.status?.toLowerCase() || "pending";
                     return (
                       <div
-                        key={dep.id || idx}
+                        key={dep.id ? `${dep.id}-${idx}` : `dep-${idx}`}
                         className="bg-black/40 p-3.5 rounded-2xl border border-zinc-900 hover:border-zinc-800 transition-all flex items-center justify-between gap-3 text-xs font-mono"
                       >
                         <div className="space-y-1">
