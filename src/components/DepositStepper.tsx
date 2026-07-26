@@ -9,16 +9,18 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
-  CreditCard,
-  Building2,
   ShieldCheck,
   Loader2,
   AlertCircle,
   Sparkles,
-  RefreshCw,
   Trash2,
   Eye,
-  FileImage
+  FileImage,
+  Clock,
+  XCircle,
+  History,
+  ArrowRight,
+  ExternalLink
 } from "lucide-react";
 
 interface DepositStepperProps {
@@ -37,6 +39,7 @@ interface DepositStepperProps {
   copyToClipboard: (text: string, type: "esewa" | "id") => void;
   copiedEsewa: boolean;
   convertAndFormatPrice: (price: number) => string;
+  userDeposits?: any[];
 }
 
 export const DepositStepper: React.FC<DepositStepperProps> = ({
@@ -54,128 +57,76 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
   paymentSettings,
   copyToClipboard,
   copiedEsewa,
-  convertAndFormatPrice
+  convertAndFormatPrice,
+  userDeposits = []
 }) => {
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const presetAmounts = [100, 500, 1000, 2000, 5000, 10000];
+  const [selectedProofModal, setSelectedProofModal] = useState<string | null>(null);
 
   const handleNextFromStep1 = () => {
     setErrorMsg(null);
-    setCurrentStep(2);
-  };
-
-  const handleNextFromStep2 = () => {
-    setErrorMsg(null);
     const amt = parseFloat(walletAmt);
     if (!walletAmt || isNaN(amt) || amt <= 0) {
-      setErrorMsg("Please enter a valid deposit amount greater than 0.");
+      setErrorMsg("Kripaya deposit garnu parne mulyankan (Amount) 0 bhanda dherai halnuhos.");
       return;
     }
-    setCurrentStep(3);
+    // Set deposit method to esewa by default
+    if (depositMethod !== "esewa") {
+      setDepositMethod("esewa");
+    }
+    setCurrentStep(2);
   };
 
   const handleFinalSubmit = async () => {
     setErrorMsg(null);
     if (!depositProofImage) {
-      setErrorMsg("Please upload a transaction proof image (screenshot) to proceed.");
+      setErrorMsg("Kripaya payment gareko screenshot (Proof Image) upload garnuhos.");
       return;
     }
     try {
       await submitDeposit();
     } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to submit deposit. Please try again.");
+      setErrorMsg(err?.message || "Deposit request pathauna sakiyana. Kripaya punah prayas garnuhos.");
     }
   };
-
-  const getMethodDetails = () => {
-    switch (depositMethod) {
-      case "esewa":
-        return {
-          title: "eSewa Direct QR / ID",
-          badge: "Instant Verification",
-          numberLabel: "eSewa ID / Phone",
-          numberValue: paymentSettings.esewaNum || "9825880400",
-          qrImage: paymentSettings.qrCode,
-          remarks: "BILL PAYMENTS / NO THIRD PARTY",
-          color: "border-green-500/40 text-green-400 bg-green-500/10"
-        };
-      case "khalti":
-        return {
-          title: "Khalti Digital Wallet",
-          badge: "Instant Verification",
-          numberLabel: "Khalti ID / Phone",
-          numberValue: paymentSettings.esewaNum || "9825880400",
-          qrImage: paymentSettings.qrCode,
-          remarks: "BILL PAYMENTS / BNY TOPUP",
-          color: "border-purple-500/40 text-purple-400 bg-purple-500/10"
-        };
-      case "binance":
-        return {
-          title: "Binance Pay / Crypto (USDT)",
-          badge: "Crypto Gateway",
-          numberLabel: "Binance Pay ID",
-          numberValue: "87349102",
-          qrImage: paymentSettings.qrCode,
-          remarks: "PAYMENT NOTE: BNY STORE",
-          color: "border-amber-500/40 text-amber-400 bg-amber-500/10"
-        };
-      case "uaebank":
-        return {
-          title: "Bank Transfer / UAE Bank",
-          badge: "Manual Verification",
-          numberLabel: "Account Number",
-          numberValue: paymentSettings.esewaNum || "9825880400",
-          qrImage: paymentSettings.qrCode,
-          remarks: "TRANSFER REMARKS: YOUR EMAIL",
-          color: "border-blue-500/40 text-blue-400 bg-blue-500/10"
-        };
-    }
-  };
-
-  const activeMethod = getMethodDetails();
 
   return (
     <div className="bg-card-bg rounded-3xl border border-zinc-900 overflow-hidden shadow-2xl space-y-6 p-4 sm:p-6">
       {/* STEPPER HEADER PROGRESS BAR */}
-      <div className="relative border-b border-zinc-900 pb-6 pt-2">
-        <div className="flex items-center justify-between max-w-md mx-auto relative z-10 px-2 sm:px-6">
+      <div className="relative border-b border-zinc-900 pb-5 pt-1">
+        <div className="flex items-center justify-between max-w-sm mx-auto relative z-10 px-4">
           {/* Step 1 Indicator */}
           <div
             onClick={() => setCurrentStep(1)}
             className="flex flex-col items-center gap-1.5 cursor-pointer group"
           >
             <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold font-orbitron transition-all duration-300 ${
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold font-orbitron transition-all duration-300 ${
                 currentStep === 1
                   ? "bg-red-600 text-white border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.6)] scale-110"
-                  : currentStep > 1
-                  ? "bg-emerald-600 text-white border-2 border-emerald-500 shadow-md"
-                  : "bg-black/60 text-zinc-500 border border-zinc-800 group-hover:border-zinc-700"
+                  : "bg-emerald-600 text-white border-2 border-emerald-500 shadow-md"
               }`}
             >
               {currentStep > 1 ? (
-                <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                <CheckCircle2 className="w-6 h-6 text-white" />
               ) : (
-                <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Wallet className="w-5 h-5 text-white" />
               )}
             </div>
             <span
-              className={`text-[10px] sm:text-xs font-black uppercase font-orbitron tracking-wider transition-colors ${
+              className={`text-[11px] font-black uppercase font-orbitron tracking-wider transition-colors ${
                 currentStep === 1
                   ? "text-red-500 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]"
-                  : currentStep > 1
-                  ? "text-emerald-400"
-                  : "text-zinc-600"
+                  : "text-emerald-400"
               }`}
             >
-              1. Method
+              1. Amount
             </span>
           </div>
 
           {/* Connecting Line 1-2 */}
-          <div className="flex-1 h-0.5 mx-2 bg-zinc-800 relative">
+          <div className="flex-1 h-0.5 mx-3 bg-zinc-800 relative">
             <div
               className="h-full bg-gradient-to-r from-red-600 to-emerald-500 transition-all duration-500"
               style={{ width: currentStep > 1 ? "100%" : "0%" }}
@@ -185,74 +136,29 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
           {/* Step 2 Indicator */}
           <div
             onClick={() => {
-              if (currentStep > 1) setCurrentStep(2);
+              if (walletAmt && parseFloat(walletAmt) > 0) setCurrentStep(2);
             }}
             className={`flex flex-col items-center gap-1.5 ${
-              currentStep >= 2 ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+              currentStep === 2 ? "cursor-pointer" : "cursor-not-allowed opacity-70"
             } group`}
           >
             <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold font-orbitron transition-all duration-300 ${
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold font-orbitron transition-all duration-300 ${
                 currentStep === 2
-                  ? "bg-red-600 text-white border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.6)] scale-110"
-                  : currentStep > 2
-                  ? "bg-emerald-600 text-white border-2 border-emerald-500 shadow-md"
-                  : "bg-black/60 text-zinc-500 border border-zinc-800"
-              }`}
-            >
-              {currentStep > 2 ? (
-                <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
-              ) : (
-                <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
-              )}
-            </div>
-            <span
-              className={`text-[10px] sm:text-xs font-black uppercase font-orbitron tracking-wider transition-colors ${
-                currentStep === 2
-                  ? "text-red-500 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]"
-                  : currentStep > 2
-                  ? "text-emerald-400"
-                  : "text-zinc-600"
-              }`}
-            >
-              2. Amount
-            </span>
-          </div>
-
-          {/* Connecting Line 2-3 */}
-          <div className="flex-1 h-0.5 mx-2 bg-zinc-800 relative">
-            <div
-              className="h-full bg-gradient-to-r from-red-600 to-emerald-500 transition-all duration-500"
-              style={{ width: currentStep > 2 ? "100%" : "0%" }}
-            />
-          </div>
-
-          {/* Step 3 Indicator */}
-          <div
-            onClick={() => {
-              if (currentStep > 2) setCurrentStep(3);
-            }}
-            className={`flex flex-col items-center gap-1.5 ${
-              currentStep >= 3 ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-            } group`}
-          >
-            <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold font-orbitron transition-all duration-300 ${
-                currentStep === 3
                   ? "bg-red-600 text-white border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.6)] scale-110"
                   : "bg-black/60 text-zinc-500 border border-zinc-800"
               }`}
             >
-              <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
+              <QrCode className="w-5 h-5" />
             </div>
             <span
-              className={`text-[10px] sm:text-xs font-black uppercase font-orbitron tracking-wider transition-colors ${
-                currentStep === 3
+              className={`text-[11px] font-black uppercase font-orbitron tracking-wider transition-colors ${
+                currentStep === 2
                   ? "text-red-500 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]"
                   : "text-zinc-600"
               }`}
             >
-              3. Proof
+              2. QR & Proof
             </span>
           </div>
         </div>
@@ -275,7 +181,7 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
 
       {/* STEP CONTENT SWITCHER */}
       <AnimatePresence mode="wait">
-        {/* STEP 1: PAYMENT METHOD SELECTION */}
+        {/* STEP 1: ENTER AMOUNT PAGE */}
         {currentStep === 1 && (
           <motion.div
             key="step1"
@@ -285,183 +191,23 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <div>
-              <h3 className="font-orbitron font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-red-500" />
-                Select Payment Method
-              </h3>
-              <p className="text-zinc-400 text-xs font-mono mt-1">
-                Choose your preferred payment gateway to add funds to your wallet.
-              </p>
-            </div>
-
-            {/* Payment Method Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                {
-                  id: "esewa",
-                  name: "eSewa Direct QR / ID",
-                  sub: "Instant Mobile Wallet",
-                  badge: "Recommended",
-                  icon: QrCode,
-                  accent: "border-green-500/60 bg-green-500/5 text-green-400"
-                },
-                {
-                  id: "khalti",
-                  name: "Khalti Wallet",
-                  sub: "Instant QR Payment",
-                  badge: "Popular",
-                  icon: Wallet,
-                  accent: "border-purple-500/60 bg-purple-500/5 text-purple-400"
-                },
-                {
-                  id: "binance",
-                  name: "Binance Pay / Crypto",
-                  sub: "USDT / Crypto Deposit",
-                  badge: "Crypto",
-                  icon: CreditCard,
-                  accent: "border-amber-500/60 bg-amber-500/5 text-amber-400"
-                },
-                {
-                  id: "uaebank",
-                  name: "Bank Transfer",
-                  sub: "Local & International",
-                  badge: "Bank Wire",
-                  icon: Building2,
-                  accent: "border-blue-500/60 bg-blue-500/5 text-blue-400"
-                }
-              ].map((m) => {
-                const isSelected = depositMethod === m.id;
-                const IconComp = m.icon;
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => setDepositMethod(m.id as any)}
-                    className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 relative ${
-                      isSelected
-                        ? "bg-red-950/30 border-red-500/80 shadow-[0_0_20px_rgba(220,38,38,0.25)] scale-[1.02]"
-                        : "bg-black/40 border-zinc-900 hover:border-zinc-800 hover:bg-black/60"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                          isSelected
-                            ? "bg-red-600 text-white border-red-500"
-                            : "bg-zinc-900 text-zinc-400 border-zinc-800"
-                        }`}
-                      >
-                        <IconComp className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-xs text-white tracking-wide">
-                            {m.name}
-                          </h4>
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${m.accent}`}>
-                            {m.badge}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-zinc-500 font-mono mt-0.5">{m.sub}</p>
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.6)]" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Selected Method Details & QR Display */}
-            <div className="bg-black/40 p-5 rounded-2xl border border-zinc-900 flex flex-col items-center space-y-4 text-center">
-              <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full border ${activeMethod.color}`}>
-                {activeMethod.badge}
-              </span>
-
-              <h4 className="font-orbitron font-extrabold text-xs text-red-500 uppercase tracking-widest filter drop-shadow-[0_0_5px_rgba(239,68,68,0.4)]">
-                {activeMethod.title}
-              </h4>
-
-              {/* QR Code Container */}
-              <div className="bg-white p-2.5 rounded-2xl border-4 border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.35)] aspect-square w-48 h-48 flex items-center justify-center relative overflow-hidden">
-                <img
-                  id="qr-display"
-                  src={activeMethod.qrImage}
-                  alt={`${activeMethod.title} QR`}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              {/* Account Number & Copy Button */}
-              <div className="space-y-1.5 font-mono w-full max-w-xs">
-                <p className="text-zinc-400 text-[10px] uppercase tracking-wider font-extrabold">
-                  {activeMethod.numberLabel}
-                </p>
-                <div className="flex items-center justify-center gap-2 bg-black/60 py-2.5 px-3 rounded-xl border border-zinc-800">
-                  <b className="text-red-500 text-sm tracking-widest font-mono filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
-                    {activeMethod.numberValue}
-                  </b>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(activeMethod.numberValue, "esewa")}
-                    className="bg-zinc-900 hover:bg-zinc-800 p-1.5 rounded-lg text-red-500 hover:text-white border border-zinc-800 cursor-pointer transition-colors shadow-sm"
-                    title="Copy Details"
-                  >
-                    {copiedEsewa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                {copiedEsewa && (
-                  <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
-                    Copied to clipboard!
-                  </p>
-                )}
-              </div>
-
-              {/* Warning Remarks Badge */}
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 w-full max-w-xs text-center">
-                <p className="text-[10px] font-black text-red-400 tracking-wider font-mono uppercase">
-                  REMARKS: {activeMethod.remarks}
-                </p>
-              </div>
-            </div>
-
-            {/* Step 1 Next Button */}
-            <button
-              type="button"
-              onClick={handleNextFromStep1}
-              className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 active:scale-[0.98] text-white transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-red-600/40 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-            >
-              <span>CONTINUE TO ENTER AMOUNT</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-
-        {/* STEP 2: ENTER AMOUNT & TRX ID */}
-        {currentStep === 2 && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
-            className="space-y-6"
-          >
-            <div>
-              <div className="flex items-center justify-between">
+            {/* Header Title with eSewa Badge */}
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <div>
                 <h3 className="font-orbitron font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-red-500" />
                   Enter Deposit Amount
                 </h3>
-                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${activeMethod.color}`}>
-                  {activeMethod.title}
-                </span>
+                <p className="text-zinc-400 text-xs font-mono mt-0.5">
+                  Enter the amount you wish to add to your wallet balance.
+                </p>
               </div>
-              <p className="text-zinc-400 text-xs font-mono mt-1">
-                Enter the exact amount sent to our account.
-              </p>
+
+              {/* Single eSewa Payment Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[10px] font-black font-mono tracking-wider shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                <span>eSewa Direct</span>
+              </div>
             </div>
 
             {/* Deposit Amount Input */}
@@ -476,7 +222,7 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
                   </span>
                   <input
                     type="number"
-                    placeholder="Enter amount (e.g. 1000)"
+                    placeholder="e.g. 500"
                     value={walletAmt}
                     onChange={(e) => {
                       setWalletAmt(e.target.value);
@@ -486,99 +232,104 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Preset Quick Chips */}
-              <div>
-                <label className="text-zinc-500 block mb-2 uppercase font-bold text-[9px] font-mono tracking-wider">
-                  Quick Select Presets
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {presetAmounts.map((amt) => {
-                    const isSelected = walletAmt === amt.toString();
+            {/* Step 1 Next Button */}
+            <button
+              type="button"
+              onClick={handleNextFromStep1}
+              className="w-full bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 active:scale-[0.98] text-white transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-red-600/40 shadow-[0_0_15px_rgba(220,38,38,0.3)] filter drop-shadow-[0_0_5px_rgba(220,38,38,0.2)]"
+            >
+              <span>NEXT: VIEW QR & UPLOAD PROOF</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* DEPOSIT HISTORY SECTION ON AMOUNT PAGE */}
+            <div className="pt-4 border-t border-zinc-900 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-orbitron font-extrabold text-xs text-white uppercase tracking-wider flex items-center gap-2">
+                  <History className="w-4 h-4 text-red-500" />
+                  Your Deposit History
+                </h4>
+                <span className="text-[10px] font-mono font-bold text-zinc-500 bg-black/60 px-2.5 py-0.5 rounded-full border border-zinc-800">
+                  Total: {userDeposits.length}
+                </span>
+              </div>
+
+              {userDeposits.length === 0 ? (
+                <div className="bg-black/30 p-6 rounded-2xl border border-zinc-900/80 text-center space-y-1">
+                  <p className="text-zinc-500 text-xs font-mono">No previous deposit requests found.</p>
+                  <p className="text-[10px] text-zinc-600 font-mono">Your deposit history will appear here once submitted.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  {userDeposits.map((dep, idx) => {
+                    const statusKey = dep.status?.toLowerCase() || "pending";
                     return (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => {
-                          setWalletAmt(amt.toString());
-                          if (errorMsg) setErrorMsg(null);
-                        }}
-                        className={`py-2 px-2 rounded-xl text-xs font-mono font-bold transition-all border cursor-pointer ${
-                          isSelected
-                            ? "bg-red-600 text-white border-red-500 shadow-[0_0_10px_rgba(220,38,38,0.4)]"
-                            : "bg-black/40 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:bg-black/80"
-                        }`}
+                      <div
+                        key={dep.id || idx}
+                        className="bg-black/40 p-3.5 rounded-2xl border border-zinc-900 hover:border-zinc-800 transition-all flex items-center justify-between gap-3 text-xs font-mono"
                       >
-                        Rs {amt >= 1000 ? `${amt / 1000}k` : amt}
-                      </button>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-white text-sm">
+                              NPR {dep.amount}
+                            </span>
+                            <span className="text-[9px] uppercase px-2 py-0.5 rounded-md bg-zinc-900 text-zinc-400 border border-zinc-800">
+                              {dep.method || "eSewa"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500">
+                            {dep.date ? new Date(dep.date).toLocaleString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            }) : "Recent"}
+                            {dep.trxId && ` • Ref: ${dep.trxId}`}
+                          </p>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex items-center gap-2">
+                          {statusKey === "approved" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
+                            </span>
+                          ) : statusKey === "rejected" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/40 text-red-400 text-[10px] font-extrabold uppercase tracking-wider shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                              <XCircle className="w-3.5 h-3.5" /> REJECTED
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[10px] font-extrabold uppercase tracking-wider animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              <Clock className="w-3.5 h-3.5" /> PENDING
+                            </span>
+                          )}
+
+                          {dep.proofImage && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedProofModal(dep.proofImage)}
+                              className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 transition-colors cursor-pointer"
+                              title="View Proof Image"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Transaction / Reference ID (Optional) */}
-              <div>
-                <label className="text-zinc-400 block mb-1.5 uppercase font-bold text-[10px] font-mono tracking-wider">
-                  Transaction / Reference ID <span className="text-zinc-600">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. TRX123456789 or Reference No."
-                  value={esewaTrx}
-                  onChange={(e) => setEsewaTrx(e.target.value)}
-                  className="w-full bg-black/60 border border-zinc-800 text-white placeholder-zinc-700 px-4 py-3 rounded-xl font-mono text-xs focus:outline-none focus:border-red-600 transition-all"
-                />
-              </div>
-
-              {/* Instructions Summary Card */}
-              <div className="bg-black/30 p-4 rounded-2xl border border-zinc-900 space-y-2 text-xs font-mono">
-                <div className="flex justify-between text-zinc-400">
-                  <span>Selected Method:</span>
-                  <span className="text-white font-bold">{activeMethod.title}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>Target Account:</span>
-                  <span className="text-red-400 font-bold">{activeMethod.numberValue}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400 border-t border-zinc-900 pt-2 mt-2">
-                  <span>Estimated Credit:</span>
-                  <span className="text-emerald-400 font-extrabold text-sm">
-                    {walletAmt ? convertAndFormatPrice(parseFloat(walletAmt) || 0) : "NPR 0"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2 Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setErrorMsg(null);
-                  setCurrentStep(1);
-                }}
-                className="w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-wider text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-800"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>BACK</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextFromStep2}
-                className="w-2/3 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 active:scale-[0.98] text-white transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-red-600/40 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-              >
-                <span>NEXT: UPLOAD PROOF</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              )}
             </div>
           </motion.div>
         )}
 
-        {/* STEP 3: UPLOAD PROOF & SUBMIT */}
-        {currentStep === 3 && (
+        {/* STEP 2: SCAN QR & UPLOAD PROOF PAGE */}
+        {currentStep === 2 && (
           <motion.div
-            key="step3"
+            key="step2"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
@@ -586,39 +337,77 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
             className="space-y-6"
           >
             <div>
-              <h3 className="font-orbitron font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-2">
-                <Upload className="w-4 h-4 text-red-500" />
-                Upload Transaction Proof
-              </h3>
-              <p className="text-zinc-400 text-xs font-mono mt-1">
-                Attach a clear screenshot or receipt photo of your completed payment.
-              </p>
-            </div>
-
-            {/* Deposit Summary Overview */}
-            <div className="bg-black/50 p-4 rounded-2xl border border-red-600/30 space-y-2 text-xs font-mono shadow-md">
-              <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900">
-                <span>Method:</span>
-                <span className="text-white font-bold">{activeMethod.title}</span>
-              </div>
-              <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900">
-                <span>Deposit Amount:</span>
-                <span className="text-red-500 font-black text-sm filter drop-shadow-[0_0_5px_rgba(239,68,68,0.4)]">
+              <div className="flex items-center justify-between">
+                <h3 className="font-orbitron font-extrabold text-sm text-white uppercase tracking-wider flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-red-500" />
+                  Scan eSewa QR & Upload Screenshot
+                </h3>
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-red-600/20 text-red-400 border border-red-500/30 font-mono">
                   NPR {walletAmt}
                 </span>
               </div>
-              {esewaTrx && (
-                <div className="flex justify-between items-center text-zinc-400">
-                  <span>Trx / Ref ID:</span>
-                  <span className="text-zinc-200 font-bold">{esewaTrx}</span>
-                </div>
-              )}
+              <p className="text-zinc-400 text-xs font-mono mt-1">
+                Scan the QR code below using eSewa app, pay NPR {walletAmt}, and upload the screenshot.
+              </p>
             </div>
 
-            {/* Drag & Drop Image Upload Zone */}
+            {/* QR Code and Payment Details Block */}
+            <div className="bg-black/40 p-5 rounded-2xl border border-zinc-900 flex flex-col items-center space-y-4 text-center">
+              <span className="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full border border-green-500/40 text-green-400 bg-green-500/10">
+                INSTANT ESEWA DIRECT
+              </span>
+
+              {/* QR Code Container */}
+              <div className="bg-white p-2.5 rounded-2xl border-4 border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.35)] aspect-square w-52 h-52 flex items-center justify-center relative overflow-hidden">
+                <img
+                  id="qr-display"
+                  src={paymentSettings.qrCode}
+                  alt="eSewa QR Code"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Account Number & Copy Button */}
+              <div className="space-y-1.5 font-mono w-full max-w-xs">
+                <p className="text-zinc-400 text-[10px] uppercase tracking-wider font-extrabold">
+                  eSewa ID / Phone Number
+                </p>
+                <div className="flex items-center justify-center gap-2 bg-black/60 py-2.5 px-3 rounded-xl border border-zinc-800">
+                  <b className="text-red-500 text-sm tracking-widest font-mono filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
+                    {paymentSettings.esewaNum || "9825880400"}
+                  </b>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(paymentSettings.esewaNum || "9825880400", "esewa")}
+                    className="bg-zinc-900 hover:bg-zinc-800 p-1.5 rounded-lg text-red-500 hover:text-white border border-zinc-800 cursor-pointer transition-colors shadow-sm"
+                    title="Copy Details"
+                  >
+                    {copiedEsewa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {copiedEsewa && (
+                  <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                    Copied to clipboard!
+                  </p>
+                )}
+              </div>
+
+              {/* Remarks Notice */}
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 w-full max-w-xs text-center space-y-0.5">
+                <p className="text-[10px] font-black text-red-400 tracking-wider font-mono uppercase">
+                  REMARKS: BILL PAYMENTS
+                </p>
+                <p className="text-[10px] font-black text-red-400 tracking-wider font-mono uppercase">
+                  NO THIRD PARTY
+                </p>
+              </div>
+            </div>
+
+            {/* SCREENSHOT PROOF UPLOAD DIRECTLY BELOW QR CODE */}
             <div className="space-y-2">
               <label className="text-zinc-400 block uppercase font-bold text-[10px] font-mono tracking-wider">
-                Screenshot / Receipt Image (PNG, JPG, JPEG) <span className="text-red-500">*</span>
+                Upload Payment Screenshot / Receipt <span className="text-red-500">*</span>
               </label>
 
               {depositProofImage ? (
@@ -639,10 +428,10 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
 
                   <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold font-mono bg-emerald-500/10 border border-emerald-500/30 py-2 px-4 rounded-xl max-w-xs mx-auto">
                     <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                    <span>Receipt Proof Attached</span>
+                    <span>Receipt Attached Successfully</span>
                   </div>
 
-                  {/* Actions: Change Image & Remove Image */}
+                  {/* Actions: Change & Remove */}
                   <div className="flex items-center justify-center gap-3 pt-1">
                     <label className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-mono font-bold px-4 py-2.5 rounded-xl cursor-pointer transition-colors shadow-sm">
                       <FileImage className="w-3.5 h-3.5 text-blue-400" />
@@ -699,13 +488,13 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
               )}
             </div>
 
-            {/* Step 3 Action Buttons */}
+            {/* Step 2 Action Buttons */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setErrorMsg(null);
-                  setCurrentStep(2);
+                  setCurrentStep(1);
                 }}
                 disabled={loading}
                 className="w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-wider text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-800 disabled:opacity-50"
@@ -728,10 +517,39 @@ export const DepositStepper: React.FC<DepositStepperProps> = ({
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4 text-white" />
-                    <span>SUBMIT DEPOSIT PROOF</span>
+                    <span>SUBMIT DEPOSIT REQUEST</span>
                   </>
                 )}
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PROOF IMAGE MODAL */}
+      <AnimatePresence>
+        {selectedProofModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedProofModal(null)}
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
+          >
+            <div className="relative max-w-lg w-full bg-black border border-zinc-800 rounded-3xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+                <h4 className="font-orbitron font-bold text-xs text-white uppercase tracking-wider">Deposit Receipt Proof</h4>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProofModal(null)}
+                  className="text-zinc-400 hover:text-white text-xs font-bold font-mono bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-800 cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="max-h-[75vh] overflow-auto rounded-xl">
+                <img src={selectedProofModal} alt="Deposit Proof" className="w-full h-auto object-contain rounded-xl" />
+              </div>
             </div>
           </motion.div>
         )}

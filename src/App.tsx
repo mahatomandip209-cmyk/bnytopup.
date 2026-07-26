@@ -1868,6 +1868,7 @@ export default function App() {
                     copyToClipboard={copyToClipboard}
                     copiedEsewa={copiedEsewa}
                     convertAndFormatPrice={convertAndFormatPrice}
+                    userDeposits={userDeposits}
                   />
                 </motion.div>
               )}
