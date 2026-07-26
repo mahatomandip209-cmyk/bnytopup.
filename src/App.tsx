@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { compressImage } from "./utils/imageCompressor";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ref,
@@ -458,13 +459,7 @@ export default function App() {
   const isAdmin = isMainAdmin || isTeamMember;
   const isSupportStaff = isTeamMember;
 
-  // Redirect support staff if on restricted views
-  useEffect(() => {
-    if (isSupportStaff && (activeSection === "wallet" || activeSection === "history" || activeSection === "profile")) {
-      setActiveSection("home");
-    }
-  }, [isSupportStaff, activeSection]);
-
+  // Support staff can access all sections like normal users
   // PWA/Install Banner States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallPopup, setShowInstallPopup] = useState<boolean>(false);
@@ -710,17 +705,32 @@ export default function App() {
     const bannersRef = ref(db, "banners");
     const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
       const val = snapshot.val();
-      if (val && Array.isArray(val)) {
-        setDbBanners(val);
-      } else if (val) {
-        setDbBanners(Object.values(val));
+      const fallbackBanners = [
+        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
+        "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
+      ];
+
+      if (!val) {
+        setDbBanners(fallbackBanners);
+        return;
+      }
+
+      let parsedList: any[] = [];
+      if (Array.isArray(val)) {
+        parsedList = val;
+      } else if (typeof val === "object") {
+        if (Array.isArray((val as any).list)) {
+          parsedList = (val as any).list;
+        } else {
+          parsedList = Object.values(val);
+        }
+      }
+
+      parsedList = parsedList.filter(Boolean);
+      if (parsedList.length > 0) {
+        setDbBanners(parsedList);
       } else {
-        const defaultBanners = [
-          "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
-          "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
-        ];
-        set(bannersRef, defaultBanners);
-        setDbBanners(defaultBanners);
+        setDbBanners(fallbackBanners);
       }
     });
 
@@ -806,19 +816,23 @@ export default function App() {
     setLoading(true);
     try {
       const res = await signInWithEmailAndPassword(auth, loginEmail, loginPass);
-      const userSnap = await get(ref(db, `users/${res.user.uid}`));
-      const uData = userSnap.val();
-      if (uData?.deleted) {
-        await signOut(auth);
-        setAuthError("the account has been deleted");
-        setLoading(false);
-        return;
-      }
-      if (uData?.blocked) {
-        await signOut(auth);
-        setAuthError("Your account is currently blocked.");
-        setLoading(false);
-        return;
+      try {
+        const userSnap = await get(ref(db, `users/${res.user.uid}`));
+        const uData = userSnap.val();
+        if (uData?.deleted) {
+          await signOut(auth);
+          setAuthError("the account has been deleted");
+          setLoading(false);
+          return;
+        }
+        if (uData?.blocked) {
+          await signOut(auth);
+          setAuthError("Your account is currently blocked.");
+          setLoading(false);
+          return;
+        }
+      } catch (userDocErr) {
+        console.warn("Could not check user status on login due to quota/network, continuing:", userDocErr);
       }
       setAuthSuccess("Logged in successfully!");
     } catch (err: any) {
@@ -838,10 +852,16 @@ export default function App() {
     }
     setLoading(true);
     try {
-      // Check if WhatsApp number is already registered
-      const usersSnap = await get(ref(db, "users"));
-      const usersData = usersSnap.val() || {};
-      const phoneExists = Object.values(usersData).some((u: any) => u.phone === regPhone);
+      // Check if WhatsApp number is already registered (safe against quota errors)
+      let phoneExists = false;
+      try {
+        const usersSnap = await get(ref(db, "users"));
+        const usersData = usersSnap.val() || {};
+        phoneExists = Object.values(usersData).some((u: any) => u.phone === regPhone);
+      } catch (e) {
+        console.warn("Could not check duplicate phone due to quota/network, proceeding:", e);
+      }
+
       if (phoneExists) {
         setAuthError("WhatsApp number is already registered.");
         setLoading(false);
@@ -850,19 +870,23 @@ export default function App() {
 
       const res = await createUserWithEmailAndPassword(auth, regEmail, regPass);
       const uniqueId = "BNY-" + Math.floor(10000 + Math.random() * 90000);
-      await set(ref(db, `users/${res.user.uid}`), {
-        name: regName,
-        email: regEmail,
-        password: regPass,
-        uniqueId: uniqueId,
-        balance: 0,
-        blocked: false,
-        phone: regPhone,
-        country: regCountry,
-        referralCode: regReferral,
-        avatarId: "vanguard",
-        role: regEmail === "bnyshopadminpanel@gmail.com" ? "admin" : "user"
-      });
+      try {
+        await set(ref(db, `users/${res.user.uid}`), {
+          name: regName,
+          email: regEmail,
+          password: regPass,
+          uniqueId: uniqueId,
+          balance: 0,
+          blocked: false,
+          phone: regPhone,
+          country: regCountry,
+          referralCode: regReferral,
+          avatarId: "vanguard",
+          role: regEmail === "bnyshopadminpanel@gmail.com" ? "admin" : "user"
+        });
+      } catch (setErr) {
+        console.warn("User record set warning:", setErr);
+      }
       setAuthSuccess("Account created successfully!");
     } catch (err: any) {
       if (err.code === "auth/email-already-in-use" || err.message?.includes("email-already-in-use")) {
@@ -1365,22 +1389,27 @@ export default function App() {
   };
 
   // Submit Deposit Transaction proof manually with image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Check file type
     const fileType = file.type;
-    if (fileType !== "image/png" && fileType !== "image/jpeg" && fileType !== "image/jpg") {
-      alert("Please upload JPG, JPEG, or PNG files only.");
+    if (fileType && !fileType.startsWith("image/")) {
+      alert("Please upload an image file (JPG, JPEG, or PNG only).");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setDepositProofImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setLoading(true);
+      const compressedBase64 = await compressImage(file, 800, 800, 0.7);
+      setDepositProofImage(compressedBase64);
+    } catch (err: any) {
+      console.error("Image processing error:", err);
+      alert("Error processing image file. Please try another image.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitDeposit = async () => {
@@ -1672,12 +1701,16 @@ export default function App() {
             
             <div className="flex items-center gap-2.5">
               {/* Balance Widget */}
-              <div className="flex items-center gap-2 border border-red-600/40 bg-red-950/10 px-3 py-1.5 rounded-xl shadow-[inset_0_0_10px_rgba(220,38,38,0.15)] h-8">
+              <button
+                onClick={() => setActiveSection("wallet")}
+                className="flex items-center gap-2 border border-red-600/40 bg-red-950/10 px-3 py-1.5 rounded-xl shadow-[inset_0_0_10px_rgba(220,38,38,0.15)] h-8 cursor-pointer hover:border-red-500 hover:bg-red-950/30 transition-all active:scale-95"
+                title="Open Wallet"
+              >
                 <span className="text-zinc-400 font-mono text-[9px] uppercase tracking-wider">Balance:</span>
                 <span className="text-red-500 font-black font-mono text-xs filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
                   {userData ? convertAndFormatPrice(userData.balance ?? 0) : "..."}
                 </span>
-              </div>
+              </button>
             </div>
           </header>
 
@@ -2130,7 +2163,7 @@ export default function App() {
           </main>
 
           {/* Bottom navigation bar */}
-          <nav className="fixed bottom-0 left-0 right-0 max-w-3xl mx-auto bg-bg-navy/95 border-t border-zinc-900 px-4 py-2.5 flex justify-around items-center z-40 shadow-[0_-10px_30px_rgba(4,8,16,0.8)] backdrop-blur-md">
+          <nav className="fixed bottom-0 left-0 right-0 max-w-3xl mx-auto bg-bg-navy/95 border-t border-zinc-900 px-4 py-2.5 flex justify-around items-center z-[100] shadow-[0_-10px_30px_rgba(4,8,16,0.8)] backdrop-blur-md">
             <button
               onClick={() => {
                 setSelectedPkg(null);

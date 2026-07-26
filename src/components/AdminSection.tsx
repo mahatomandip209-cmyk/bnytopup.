@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { compressImage } from "../utils/imageCompressor";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ref,
@@ -417,11 +418,21 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
     const bannersRef = ref(db, "banners");
     const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
       const val = snapshot.val();
-      if (val) {
-        setCurrentBanners(Array.isArray(val) ? val : Object.values(val));
-      } else {
+      if (!val) {
         setCurrentBanners([]);
+        return;
       }
+      let parsedList: any[] = [];
+      if (Array.isArray(val)) {
+        parsedList = val;
+      } else if (typeof val === "object") {
+        if (Array.isArray((val as any).list)) {
+          parsedList = (val as any).list;
+        } else {
+          parsedList = Object.values(val);
+        }
+      }
+      setCurrentBanners(parsedList.filter(Boolean));
     });
 
     // 8. Fetch Categories (Seed defaults if empty)
@@ -1013,20 +1024,16 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
   };
 
   // Handle local QR code image select (File upload -> base64)
-  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQrImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== "image/png" && file.type !== "image/jpeg" && file.type !== "image/jpg") {
-      alert("Please upload JPG, JPEG, or PNG files only.");
-      return;
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.7);
+      setQrInputUrl(compressed);
+    } catch (err) {
+      console.error("QR Image process error:", err);
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setQrInputUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   // ---------------- GAME-SPECIFIC REQUIREMENTS CRUD ----------------
@@ -2512,14 +2519,15 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                             <input
                               type="file"
                               accept="image/*"
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setNewGameImage(reader.result as string);
-                                  };
-                                  reader.readAsDataURL(file);
+                                  try {
+                                    const compressed = await compressImage(file, 800, 800, 0.7);
+                                    setNewGameImage(compressed);
+                                  } catch (err) {
+                                    console.error("Game image error:", err);
+                                  }
                                 }
                               }}
                               className="hidden"
@@ -3827,14 +3835,15 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setNewBannerUrl(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
+                            try {
+                              const compressed = await compressImage(file, 800, 800, 0.7);
+                              setNewBannerUrl(compressed);
+                            } catch (err) {
+                              console.error("Banner image error:", err);
+                            }
                           }
                         }}
                         className="hidden"
