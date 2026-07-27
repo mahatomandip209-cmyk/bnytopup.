@@ -779,15 +779,21 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
 
     const existingGame = dbGames.find(g => g.id === editingGameId);
     const finalFields = existingGame?.fields || [];
+    const finalPackages = existingGame?.packages || [];
+
+    const updatedGameObj = {
+      ...(existingGame || {}),
+      id: editingGameId,
+      name: editGameName.trim(),
+      image: editGameImage.trim() || existingGame?.image || "https://i.ibb.co/My1kJfTy/IMG-20260302-211532.jpg",
+      category: editGameCategory,
+      description: editGameDesc.trim(),
+      fields: finalFields,
+      packages: finalPackages
+    };
 
     try {
-      await update(ref(db, `games/${editingGameId}`), {
-        name: editGameName.trim(),
-        image: editGameImage.trim(),
-        category: editGameCategory,
-        description: editGameDesc.trim(),
-        fields: finalFields
-      });
+      await set(ref(db, `games/${editingGameId}`), updatedGameObj);
       setEditingGameId(null);
       alert("Game updated successfully!");
     } catch (err: any) {
@@ -2623,14 +2629,15 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                   <input
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       const file = e.target.files?.[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                          setEditGameImage(reader.result as string);
-                                        };
-                                        reader.readAsDataURL(file);
+                                        try {
+                                          const compressed = await compressImage(file, 800, 800, 0.7);
+                                          setEditGameImage(compressed);
+                                        } catch (err) {
+                                          console.error("Game edit image error:", err);
+                                        }
                                       }
                                     }}
                                     className="hidden"
@@ -3969,14 +3976,15 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                     <input
                                       type="file"
                                       accept="image/*"
-                                      onChange={(e) => {
+                                      onChange={async (e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            setEditBannerUrl(reader.result as string);
-                                          };
-                                          reader.readAsDataURL(file);
+                                          try {
+                                            const compressed = await compressImage(file, 1200, 600, 0.7);
+                                            setEditBannerUrl(compressed);
+                                          } catch (err) {
+                                            console.error("Banner edit image error:", err);
+                                          }
                                         }
                                       }}
                                       className="hidden"
