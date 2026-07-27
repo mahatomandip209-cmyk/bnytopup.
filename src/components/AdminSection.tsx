@@ -382,7 +382,11 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
         }
 
         const filteredList = list.filter(g => g.id !== "ff_likebot");
-        setDbGames(filteredList);
+        const dbGameIds = new Set(filteredList.map(g => g.id));
+        const missingDefaults = servicesData.filter(def => !dbGameIds.has(def.id));
+        const combined = [...filteredList, ...missingDefaults];
+        const uniqueGames = Array.from(new Map(combined.map(g => [g.id, g])).values());
+        setDbGames(uniqueGames);
       } else {
         setDbGames(servicesData);
       }
@@ -1324,6 +1328,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
       o.playerUid?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.packageName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.game?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.accountEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.uniqueId?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -1867,11 +1873,17 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                               <h4 className="text-white text-base font-sans font-black truncate">{order.packageName}</h4>
                             </div>
 
-                            {/* Gamer Email */}
-                            <div className="text-xs font-mono text-zinc-300 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-zinc-900 w-fit max-w-full truncate">
-                              <span className="text-zinc-500 uppercase font-bold text-[10px] shrink-0">Email:</span>
-                              <span className="font-bold text-zinc-200 select-all truncate">{order.email || order.customerEmail || "N/A"}</span>
-                            </div>
+                            {/* User Account Email */}
+                            {(() => {
+                              const matchedUser = allUsers.find((u: any) => u.uid === order.uid);
+                              const userAccountEmail = order.userEmail || order.accountEmail || matchedUser?.email || (order.email && order.email !== order.submitted_requirements?.email && order.email !== order.submitted_requirements?.Email ? order.email : null) || "N/A";
+                              return (
+                                <div className="text-xs font-mono text-zinc-300 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-zinc-900 w-fit max-w-full truncate">
+                                  <span className="text-zinc-500 uppercase font-bold text-[10px] shrink-0">Account Email:</span>
+                                  <span className="font-bold text-zinc-200 select-all truncate">{userAccountEmail}</span>
+                                </div>
+                              );
+                            })()}
 
                             <div className="text-[10px] text-zinc-500 font-mono">
                               Date: {new Date(order.timestamp).toLocaleString()}
@@ -1935,8 +1947,8 @@ export default function AdminSection({ db, currentUser, services, setActiveSecti
                                   </div>
                                 );
                               }
-                              return reqs.map((req) => (
-                                <div key={req.label} className="flex items-center justify-between gap-2 bg-black/60 border border-zinc-900 rounded-xl p-3">
+                              return reqs.map((req, reqIdx) => (
+                                <div key={req.label ? `${req.label}-${reqIdx}` : `req-${reqIdx}`} className="flex items-center justify-between gap-2 bg-black/60 border border-zinc-900 rounded-xl p-3">
                                   <div className="min-w-0 flex-1">
                                     <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-extrabold mb-0.5">
                                       {req.label}

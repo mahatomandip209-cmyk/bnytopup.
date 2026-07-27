@@ -38,7 +38,8 @@ class DatabaseReference {
 }
 
 export function ref(dbInstance: any, path: string = "") {
-  return new DatabaseReference(path);
+  const cleanPath = path ? String(path).split("/").filter(Boolean).join("/") : "";
+  return new DatabaseReference(cleanPath);
 }
 
 // Map Realtime Database style paths dynamically to standard Cloud Firestore references
@@ -518,7 +519,7 @@ export async function update(refObj: DatabaseReference, data: any) {
 
     if (isDoc) {
       const docRef = fRef as DocumentReference;
-      await updateDoc(docRef, data);
+      await setDoc(docRef, data, { merge: true });
     } else {
       const colRef = fRef as CollectionReference;
       if (data && typeof data === "object") {

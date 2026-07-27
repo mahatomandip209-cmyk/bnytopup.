@@ -236,6 +236,16 @@ export default function App() {
 
   // Listen to games, categories and payment settings
   useEffect(() => {
+    const normalizeCategoryKey = (cat: string) => {
+      if (!cat) return "topup";
+      const str = String(cat).toLowerCase().trim();
+      if (str.includes("bot") || str === "ffbot" || str === "ffbots") return "ffbots";
+      if (str.includes("vouch") || str === "voucher_code") return "voucher";
+      if (str.includes("sub")) return "subscriptions";
+      if (str.includes("top") || str === "diamond" || str === "pass") return "topup";
+      return str;
+    };
+
     const gamesRef = ref(db, "games");
     const unsubscribeGames = onValue(gamesRef, (snapshot) => {
       const data = snapshot.val();
@@ -244,13 +254,7 @@ export default function App() {
         if (Array.isArray(data)) {
           list = data.map((game, idx) => {
             if (!game || !game.name) return null;
-            let category = game.category;
-            if (category === "subscription") {
-              category = "subscriptions";
-            }
-            if ((game.id === "ff_likebot" || game.id === "ff_glorybot") && category === "voucher") {
-              category = "ffbots";
-            }
+            const category = normalizeCategoryKey(game.category);
             return {
               ...game,
               id: game.id || String(idx),
@@ -262,13 +266,7 @@ export default function App() {
           list = Object.keys(data).map(key => {
             const game = data[key];
             if (!game || !game.name) return null;
-            let category = game.category;
-            if (category === "subscription") {
-              category = "subscriptions";
-            }
-            if ((key === "ff_likebot" || key === "ff_glorybot" || game.id === "ff_likebot" || game.id === "ff_glorybot") && (category === "voucher" || category === "voucher_option" || !category)) {
-              category = "ffbots";
-            }
+            const category = normalizeCategoryKey(game.category);
             return {
               ...game,
               id: game.id || key,
@@ -285,7 +283,13 @@ export default function App() {
         }
 
         const filteredList = list.filter(g => g.id !== "ff_likebot");
-        setDbServices(filteredList);
+        
+        // Merge Firestore games with default servicesData so essential items are never missing
+        const dbGameIds = new Set(filteredList.map(g => g.id));
+        const missingDefaults = servicesData.filter(def => !dbGameIds.has(def.id));
+        const combined = [...filteredList, ...missingDefaults];
+        const uniqueServices = Array.from(new Map(combined.map(s => [s.id, s])).values());
+        setDbServices(uniqueServices);
       } else {
         setDbServices(servicesData);
       }
@@ -1332,11 +1336,12 @@ export default function App() {
         await update(ref(db, `users/${currentUser.uid}`), { balance: newBal });
       }
 
+      const accountUserEmail = currentUser.email || userData.email || "";
+
       const orderPayload = {
         orderId,
         userOrderId,
         uid: currentUser.uid,
-        email: currentUser.email || userData.email || "",
         uniqueId: userData.uniqueId || "",
         game: activeService.name,
         gameImage: activeService.image || "",
@@ -1347,6 +1352,9 @@ export default function App() {
         timestamp: Date.now(),
         submitted_requirements,
         ...fieldsState,
+        userEmail: accountUserEmail,
+        accountEmail: accountUserEmail,
+        ...(fieldsState.email ? {} : { email: accountUserEmail }),
         ...(isVoucher ? { voucher_codes: assignedVouchers.map(v => v.code) } : {})
       };
 
@@ -1799,11 +1807,11 @@ export default function App() {
                         ></div>
                       ))
                     ) : (
-                      dbCategories.map((cat) => {
+                      dbCategories.map((cat, catIdx) => {
                         const isActive = selectedCategory === cat.id;
                         return (
                           <button
-                            key={cat.id}
+                            key={cat.id ? `${cat.id}-${catIdx}` : `cat-${catIdx}`}
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`px-4 py-2.5 rounded-xl font-orbitron font-extrabold text-[11px] uppercase tracking-wider transition-all duration-300 border cursor-pointer text-center shrink-0 ${
                               isActive
@@ -1831,7 +1839,16 @@ export default function App() {
                       ))}
                     </div>
                   ) : (
-                    dbServices.filter((service) => service.category === selectedCategory).length === 0 ? (
+                    dbServices.filter((service) => {
+                      const sc = (service.category || "").toLowerCase().trim();
+                      const sel = (selectedCategory || "").toLowerCase().trim();
+                      if (sc === sel) return true;
+                      if ((sc.includes("bot") || sc === "ffbot") && (sel.includes("bot") || sel === "ffbot")) return true;
+                      if ((sc.includes("vouch") || sc === "voucher_code") && (sel.includes("vouch") || sel === "voucher_code")) return true;
+                      if (sc.includes("sub") && sel.includes("sub")) return true;
+                      if ((sc.includes("top") || sc === "diamond" || sc === "pass") && (sel.includes("top") || sel === "diamond" || sel === "pass")) return true;
+                      return false;
+                    }).length === 0 ? (
                       <div className="col-span-full py-16 text-center border border-dashed border-zinc-800 rounded-3xl bg-black/20 px-4">
                         <span className="text-3xl block mb-2">🎮</span>
                         <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-wider">No games or services available in this category yet.</p>
@@ -1839,10 +1856,19 @@ export default function App() {
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
                         {dbServices
-                          .filter((service) => service.category === selectedCategory)
-                          .map((service) => (
+                          .filter((service) => {
+                            const sc = (service.category || "").toLowerCase().trim();
+                            const sel = (selectedCategory || "").toLowerCase().trim();
+                            if (sc === sel) return true;
+                            if ((sc.includes("bot") || sc === "ffbot") && (sel.includes("bot") || sel === "ffbot")) return true;
+                            if ((sc.includes("vouch") || sc === "voucher_code") && (sel.includes("vouch") || sel === "voucher_code")) return true;
+                            if (sc.includes("sub") && sel.includes("sub")) return true;
+                            if ((sc.includes("top") || sc === "diamond" || sc === "pass") && (sel.includes("top") || sel === "diamond" || sel === "pass")) return true;
+                            return false;
+                          })
+                          .map((service, sIdx) => (
                             <div
-                              key={service.id}
+                              key={service.id ? `${service.id}-${sIdx}` : `svc-${sIdx}`}
                               onClick={() => openTopup(service)}
                               className="group bg-card-bg rounded-2xl overflow-hidden border border-zinc-900 hover:border-red-600 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(239,68,68,0.2)] active:scale-95 flex flex-col justify-between"
                             >
