@@ -1476,9 +1476,199 @@ const DEFAULT_BANNERS = [
   const vouchersList = typeof rawVouchersObj === "object"
     ? Object.keys(rawVouchersObj).map((key: any) => ({ id: key, ...rawVouchersObj[key] }))
     : [];
-  const availableVouchersCount = selectedPkg 
-    ? vouchersList.filter((v: any) => (v.status === "available" || !v.status) && v.packageName === selectedPkg.n).length
-    : vouchersList.filter((v: any) => v.status === "available" || !v.status).length;
+  const renderMemberPortalForm = () => (
+    <div className="w-full py-6 flex flex-col justify-center items-center">
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-md bg-card-bg rounded-3xl border border-red-600/30 p-6 md:p-8 shadow-[0_0_50px_rgba(220,38,38,0.15)]"
+      >
+        {authView === "login" ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="text-center mb-3">
+              <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-white uppercase">MEMBER PORTAL</h2>
+              <p className="text-xs text-zinc-400 mt-1">Sign in to manage your store wallet, orders & profile</p>
+            </div>
+
+            {authError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs font-semibold text-red-400 text-center leading-relaxed">
+                {authError}
+              </div>
+            )}
+            {authSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs font-semibold text-emerald-400 text-center leading-relaxed">
+                {authSuccess}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="Email Address"
+                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all font-mono text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Security Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <input
+                  type="password"
+                  value={loginPass}
+                  onChange={(e) => setLoginPass(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all font-mono text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 active:scale-[0.98] transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-red-500/50 shadow-[0_4px_15px_rgba(220,38,38,0.3)] mt-2"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <UserCheck className="w-4 h-4" />
+                  ENTER BNY PORTAL
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-zinc-400 text-xs mt-6">
+              Don't have an account?{" "}
+              <span
+                className="text-red-500 cursor-pointer hover:underline font-extrabold uppercase tracking-wider"
+                onClick={() => {
+                  setAuthView("register");
+                  setAuthError(null);
+                  setAuthSuccess(null);
+                }}
+              >
+                Register
+              </span>
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-3.5">
+            <div className="text-center mb-1">
+              <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-white uppercase font-black">CREATE ACCOUNT</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">Register for a BNY Shop account</p>
+            </div>
+
+            {authError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs font-semibold text-red-400 text-center leading-relaxed">
+                {authError}
+              </div>
+            )}
+            {authSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs font-semibold text-emerald-400 text-center leading-relaxed">
+                {authSuccess}
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Full Name</label>
+              <input
+                type="text"
+                value={regName}
+                onChange={(e) => setRegName(e.target.value)}
+                placeholder="Full Name"
+                className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-4 py-2.5 rounded-xl focus:outline-none focus:border-red-600 transition-all text-xs font-semibold"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">WhatsApp Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                <input
+                  type="text"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="9825880400"
+                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-9 py-2.5 rounded-xl focus:outline-none focus:border-red-600 transition-all text-xs font-mono font-bold"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                <input
+                  type="email"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  placeholder="Email Address"
+                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-2.5 rounded-xl focus:outline-none focus:border-red-600 transition-all font-mono text-xs"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Create Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                <input
+                  type="password"
+                  value={regPass}
+                  onChange={(e) => setRegPass(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-9 py-2.5 rounded-xl focus:outline-none focus:border-red-600 transition-all font-mono text-xs"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-brand-orange to-brand-orange/90 hover:from-brand-orange hover:to-brand-orange active:scale-[0.98] transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-brand-orange/50 shadow-[0_4px_15px_rgba(243,91,4,0.3)]"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <UserCheck className="w-4 h-4" />
+                  CREATE ACCOUNT
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-zinc-400 text-xs mt-4">
+              Already registered?{" "}
+              <span
+                className="text-red-500 cursor-pointer hover:underline font-extrabold uppercase tracking-wider"
+                onClick={() => {
+                  setAuthView("login");
+                  setAuthError(null);
+                  setAuthSuccess(null);
+                }}
+              >
+                Log In
+              </span>
+            </p>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-bg-navy text-white font-sans flex flex-col antialiased selection:bg-brand-orange selection:text-white">
@@ -1492,231 +1682,38 @@ const DEFAULT_BANNERS = [
         </div>
       )}
 
-      {/* ADMIN LOGIN SCREEN WHEN NOT ADMIN AUTHENTICATED */}
-      {activeSection === "admin" && !isAdmin && !authInitializing && renderAdminLogin()}
-
-      {/* AUTH SCREEN VIEW */}
-      {activeSection !== "admin" && !currentUser && !authInitializing && (
-        <div id="auth-screen" className="flex-1 flex flex-col justify-center items-center px-4 py-12 bg-[radial-gradient(circle_at_center,_#0b162c_0%,_#040810_100%)]">
-          <motion.div
-            initial={{ y: -15, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
-            <Logo iconSize={32} textClass="text-3xl" />
-          </motion.div>
-
-          <motion.div
-            initial={{ scale: 0.96, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="w-full max-w-md bg-card-bg rounded-3xl border border-brand-blue/30 p-8 shadow-[0_0_50px_rgba(0,102,204,0.15)]"
-          >
-            {authView === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="text-center mb-2">
-                  <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-white uppercase">MEMBER PORTAL</h2>
-                  <p className="text-xs text-zinc-400 mt-1">Access your store wallets and order tracker</p>
-                </div>
-
-                {authError && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs font-semibold text-red-400 text-center leading-relaxed">
-                    {authError}
-                  </div>
-                )}
-                {authSuccess && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs font-semibold text-emerald-400 text-center leading-relaxed">
-                    {authSuccess}
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                    <input
-                      type="email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="Email Address"
-                      className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-3 rounded-xl focus:outline-none focus:border-brand-blue transition-all font-mono text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Security Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                    <input
-                      type="password"
-                      value={loginPass}
-                      onChange={(e) => setLoginPass(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-3 rounded-xl focus:outline-none focus:border-brand-blue transition-all font-mono text-sm"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-brand-blue to-brand-blue/90 hover:from-brand-blue hover:to-brand-blue active:scale-[0.98] transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-brand-blue/50 shadow-[0_4px_15px_rgba(0,102,204,0.3)] mt-2"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <UserCheck className="w-4 h-4" />
-                      ENTER BNY PORTAL
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-zinc-400 text-xs mt-6">
-                  Don't have an account?{" "}
-                  <span
-                    className="text-brand-orange cursor-pointer hover:underline font-extrabold"
-                    onClick={() => {
-                      setAuthView("register");
-                      setAuthError(null);
-                      setAuthSuccess(null);
-                    }}
-                  >
-                    Register
-                  </span>
-                </p>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="text-center mb-1">
-                  <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-white uppercase font-black">CREATE ACCOUNT</h2>
-                </div>
-
-                {authError && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-xs font-semibold text-red-400 text-center leading-relaxed">
-                    {authError}
-                  </div>
-                )}
-                {authSuccess && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-xs font-semibold text-emerald-400 text-center leading-relaxed">
-                    {authSuccess}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Full Name</label>
-                  <input
-                    type="text"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="Full Name"
-                    className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-4 py-2.5 rounded-xl focus:outline-none focus:border-brand-blue transition-all text-xs font-semibold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">WhatsApp Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
-                    <input
-                      type="text"
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="9825880400"
-                      className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-9 py-2.5 rounded-xl focus:outline-none focus:border-brand-blue transition-all text-xs font-mono font-bold"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
-                    <input
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="Email Address"
-                      className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-10 py-2.5 rounded-xl focus:outline-none focus:border-brand-blue transition-all font-mono text-xs"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Create Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
-                    <input
-                      type="password"
-                      value={regPass}
-                      onChange={(e) => setRegPass(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-black/50 border border-zinc-900 text-white placeholder-zinc-700 px-9 py-2.5 rounded-xl focus:outline-none focus:border-brand-blue transition-all font-mono text-xs"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-brand-orange to-brand-orange/90 hover:from-brand-orange hover:to-brand-orange active:scale-[0.98] transition-all py-3.5 rounded-xl font-bold font-orbitron tracking-widest text-xs flex items-center justify-center gap-2 cursor-pointer border border-brand-orange/50 shadow-[0_4px_15px_rgba(243,91,4,0.3)]"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <UserCheck className="w-4 h-4" />
-                      CREATE ACCOUNT
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-zinc-400 text-xs mt-4">
-                  Already registered?{" "}
-                  <span
-                    className="text-brand-orange cursor-pointer hover:underline font-extrabold"
-                    onClick={() => {
-                      setAuthView("login");
-                      setAuthError(null);
-                      setAuthSuccess(null);
-                    }}
-                  >
-                    Login
-                  </span>
-                </p>
-              </form>
-            )}
-          </motion.div>
-        </div>
-      )}
-
-      {/* MAIN APPLICATION INTERFACE */}
-      {((activeSection === "admin" && isAdmin) || (activeSection !== "admin" && currentUser)) && !authInitializing && (
+      {/* MAIN APPLICATION INTERFACE FOR ALL USERS */}
+      {!authInitializing && (
         <div id="app-content" className={`flex-1 flex flex-col w-full ${activeSection === "admin" && isAdmin ? "max-w-6xl" : "max-w-3xl"} mx-auto pb-24 shadow-2xl min-h-screen bg-bg-navy border-x border-zinc-900/40 transition-all duration-300`}>
           {/* Header Bar */}
           <header className="sticky top-0 bg-bg-navy/90 backdrop-blur-md px-5 py-4 flex justify-between items-center border-b border-red-600/20 z-50">
             <Logo iconSize={20} textClass="text-lg" />
             
             <div className="flex items-center gap-2.5">
-              {/* Balance Widget */}
-              <button
-                onClick={() => setActiveSection("wallet")}
-                className="flex items-center gap-2 border border-red-600/40 bg-red-950/10 px-3 py-1.5 rounded-xl shadow-[inset_0_0_10px_rgba(220,38,38,0.15)] h-8 cursor-pointer hover:border-red-500 hover:bg-red-950/30 transition-all active:scale-95"
-                title="Open Wallet"
-              >
-                <span className="text-zinc-400 font-mono text-[9px] uppercase tracking-wider">Balance:</span>
-                <span className="text-red-500 font-black font-mono text-xs filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
-                  {userData ? convertAndFormatPrice(userData.balance ?? 0) : "..."}
-                </span>
-              </button>
+              {/* Balance Widget / Login Button */}
+              {currentUser ? (
+                <button
+                  onClick={() => setActiveSection("wallet")}
+                  className="flex items-center gap-2 border border-red-600/40 bg-red-950/10 px-3 py-1.5 rounded-xl shadow-[inset_0_0_10px_rgba(220,38,38,0.15)] h-8 cursor-pointer hover:border-red-500 hover:bg-red-950/30 transition-all active:scale-95"
+                  title="Open Wallet"
+                >
+                  <span className="text-zinc-400 font-mono text-[9px] uppercase tracking-wider">Balance:</span>
+                  <span className="text-red-500 font-black font-mono text-xs filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
+                    {userData ? convertAndFormatPrice(userData.balance ?? 0) : convertAndFormatPrice(0)}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setProfileActiveTab("menu");
+                    setActiveSection("profile");
+                  }}
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-orbitron font-extrabold text-[10px] uppercase tracking-wider px-3.5 py-1.5 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.6)] cursor-pointer transition-all active:scale-95 border border-red-400/30"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  LOGIN / REGISTER
+                </button>
+              )}
             </div>
           </header>
 
@@ -1894,32 +1891,38 @@ const DEFAULT_BANNERS = [
                   transition={{ duration: 0.2 }}
                   className="space-y-6"
                 >
-                  <div className="text-center py-6 bg-gradient-to-b from-card-bg to-[#070b14] rounded-3xl border border-red-600/30 space-y-1 shadow-[0_0_20px_rgba(220,38,38,0.15)]">
-                    <p className="text-zinc-400 text-[10px] uppercase font-mono tracking-widest">Available BNY Store Wallet</p>
-                    <h1 className="font-orbitron text-3xl font-extrabold text-red-500 tracking-wider filter drop-shadow-[0_0_10px_rgba(239,68,68,0.65)]">
-                      {userData ? convertAndFormatPrice(userData.balance ?? 0) : "..."}
-                    </h1>
-                  </div>
+                  {currentUser ? (
+                    <>
+                      <div className="text-center py-6 bg-gradient-to-b from-card-bg to-[#070b14] rounded-3xl border border-red-600/30 space-y-1 shadow-[0_0_20px_rgba(220,38,38,0.15)]">
+                        <p className="text-zinc-400 text-[10px] uppercase font-mono tracking-widest">Available BNY Store Wallet</p>
+                        <h1 className="font-orbitron text-3xl font-extrabold text-red-500 tracking-wider filter drop-shadow-[0_0_10px_rgba(239,68,68,0.65)]">
+                          {userData ? convertAndFormatPrice(userData.balance ?? 0) : convertAndFormatPrice(0)}
+                        </h1>
+                      </div>
 
-                  {/* Multi-Step Deposit Stepper Component */}
-                  <DepositStepper
-                    depositMethod={depositMethod}
-                    setDepositMethod={setDepositMethod}
-                    walletAmt={walletAmt}
-                    setWalletAmt={setWalletAmt}
-                    esewaTrx={esewaTrx}
-                    setEsewaTrx={setEsewaTrx}
-                    depositProofImage={depositProofImage}
-                    handleImageUpload={handleImageUpload}
-                    setDepositProofImage={setDepositProofImage}
-                    submitDeposit={submitDeposit}
-                    loading={loading}
-                    paymentSettings={paymentSettings}
-                    copyToClipboard={copyToClipboard}
-                    copiedEsewa={copiedEsewa}
-                    convertAndFormatPrice={convertAndFormatPrice}
-                    userDeposits={userDeposits}
-                  />
+                      {/* Multi-Step Deposit Stepper Component */}
+                      <DepositStepper
+                        depositMethod={depositMethod}
+                        setDepositMethod={setDepositMethod}
+                        walletAmt={walletAmt}
+                        setWalletAmt={setWalletAmt}
+                        esewaTrx={esewaTrx}
+                        setEsewaTrx={setEsewaTrx}
+                        depositProofImage={depositProofImage}
+                        handleImageUpload={handleImageUpload}
+                        setDepositProofImage={setDepositProofImage}
+                        submitDeposit={submitDeposit}
+                        loading={loading}
+                        paymentSettings={paymentSettings}
+                        copyToClipboard={copyToClipboard}
+                        copiedEsewa={copiedEsewa}
+                        convertAndFormatPrice={convertAndFormatPrice}
+                        userDeposits={userDeposits}
+                      />
+                    </>
+                  ) : (
+                    renderMemberPortalForm()
+                  )}
                 </motion.div>
               )}
 
@@ -1932,19 +1935,23 @@ const DEFAULT_BANNERS = [
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <HistorySection
-                    userOrders={userOrders}
-                    userDeposits={userDeposits}
-                    historySubTab={historySubTab}
-                    setHistorySubTab={setHistorySubTab}
-                    copyToClipboard={copyToClipboard}
-                    setActiveSection={setActiveSection}
-                    setProfileActiveTab={setProfileActiveTab}
-                    setSupportTopic={setSupportTopic}
-                    setSupportMessage={setSupportMessage}
-                    expandedOrder={expandedOrderId}
-                    setExpandedOrder={setExpandedOrderId}
-                  />
+                  {currentUser ? (
+                    <HistorySection
+                      userOrders={userOrders}
+                      userDeposits={userDeposits}
+                      historySubTab={historySubTab}
+                      setHistorySubTab={setHistorySubTab}
+                      copyToClipboard={copyToClipboard}
+                      setActiveSection={setActiveSection}
+                      setProfileActiveTab={setProfileActiveTab}
+                      setSupportTopic={setSupportTopic}
+                      setSupportMessage={setSupportMessage}
+                      expandedOrder={expandedOrderId}
+                      setExpandedOrder={setExpandedOrderId}
+                    />
+                  ) : (
+                    renderMemberPortalForm()
+                  )}
                 </motion.div>
               )}
 
@@ -1957,27 +1964,31 @@ const DEFAULT_BANNERS = [
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <ProfileSection
-                    userData={userData}
-                    systemNotifications={systemNotifications}
-                    userTickets={userTickets}
-                    supportTopic={supportTopic}
-                    setSupportTopic={setSupportTopic}
-                    supportMessage={supportMessage}
-                    setSupportMessage={setSupportMessage}
-                    loading={loading}
-                    submitSupportTicket={submitSupportTicket}
-                    openEditModal={openEditModal}
-                    setPassModal={setPassModal}
-                    handleLogout={handleLogout}
-                    copyToClipboard={copyToClipboard}
-                    copiedId={copiedId}
-                    setActiveSection={setActiveSection}
-                    openTopup={openTopup}
-                    activeTab={profileActiveTab}
-                    setActiveTab={setProfileActiveTab}
-                    isAdmin={isAdmin}
-                  />
+                  {currentUser ? (
+                    <ProfileSection
+                      userData={userData}
+                      systemNotifications={systemNotifications}
+                      userTickets={userTickets}
+                      supportTopic={supportTopic}
+                      setSupportTopic={setSupportTopic}
+                      supportMessage={supportMessage}
+                      setSupportMessage={setSupportMessage}
+                      loading={loading}
+                      submitSupportTicket={submitSupportTicket}
+                      openEditModal={openEditModal}
+                      setPassModal={setPassModal}
+                      handleLogout={handleLogout}
+                      copyToClipboard={copyToClipboard}
+                      copiedId={copiedId}
+                      setActiveSection={setActiveSection}
+                      openTopup={openTopup}
+                      activeTab={profileActiveTab}
+                      setActiveTab={setProfileActiveTab}
+                      isAdmin={isAdmin}
+                    />
+                  ) : (
+                    renderMemberPortalForm()
+                  )}
                 </motion.div>
               )}
 
