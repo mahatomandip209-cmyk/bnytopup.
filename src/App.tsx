@@ -173,6 +173,7 @@ export default function App() {
 
   // Category selection state
   const [dbCategories, setDbCategories] = useState<any[]>([
+    { id: "all", name: "ALL SERVICES" },
     { id: "ffbots", name: "FF BOTS" },
     { id: "topup", name: "TOPUP" },
     { id: "voucher", name: "VOUCHER" },
@@ -186,10 +187,11 @@ export default function App() {
   const [selectedPkg, setSelectedPkg] = useState<GamePackage | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
 
-const DEFAULT_BANNERS = [
-  "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
-];
+  const DEFAULT_BANNERS = [
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
+    "https://i.ibb.co/Qv0ZyF0w/IMG-20260713-WA0032.jpg",
+    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&q=80&w=1200"
+  ];
 
   // Dynamic input fields state for active order
   const [fieldsState, setFieldsState] = useState<any>({});
@@ -636,7 +638,7 @@ const DEFAULT_BANNERS = [
     if (typeof window !== "undefined" && (window.location.pathname === "/admin" || window.location.pathname.endsWith("/admin") || window.location.href.includes("/admin"))) {
       setActiveSection("admin");
     }
-    setSelectedCategory(dbCategories[0]?.id || "ffbots");
+    setSelectedCategory("all");
   }, []);
 
   // Set up custom glowing alert and confirm dialogue overrides
@@ -2485,7 +2487,7 @@ const DEFAULT_BANNERS = [
                     setVoucherSuccessModal(null);
                     setSelectedPkg(null);
                     setFieldsState({});
-                    setSelectedCategory(dbCategories[0]?.id || "ffbots");
+                    setSelectedCategory("all");
                     setActiveSection("home");
                     window.location.reload();
                   }}
