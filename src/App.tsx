@@ -178,7 +178,7 @@ export default function App() {
     { id: "voucher", name: "VOUCHER" },
     { id: "subscriptions", name: "SUBSCRIPTIONS" }
   ]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ffbots");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isCategoryInitialized, setIsCategoryInitialized] = useState<boolean>(false);
 
   // Active service selection (one of the 10 services)
@@ -204,6 +204,18 @@ const DEFAULT_BANNERS = [
   // Slider Image Banner Carousel State (initialize with DEFAULT_BANNERS so guests always see promo slides)
   const [slideIndex, setSlideIndex] = useState(0);
   const [dbBanners, setDbBanners] = useState<string[]>(DEFAULT_BANNERS);
+
+  // Auto slider loop and bounds safety to ensure banners are never stuck or blank
+  useEffect(() => {
+    const activeBannersCount = dbBanners.length > 0 ? dbBanners.length : DEFAULT_BANNERS.length;
+    if (slideIndex >= activeBannersCount) {
+      setSlideIndex(0);
+    }
+    const timer = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % (activeBannersCount || 1));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [dbBanners.length, slideIndex]);
 
   // Keep activeService and selectedPkg synchronized with dbServices updates in real time
   useEffect(() => {
@@ -309,6 +321,7 @@ const DEFAULT_BANNERS = [
     const unsubscribeCategories = onValue(categoriesRef, (snapshot) => {
       const data = snapshot.val();
       const defaultCats = [
+        { id: "all", name: "ALL SERVICES" },
         { id: "ffbots", name: "FF BOTS" },
         { id: "topup", name: "TOPUP" },
         { id: "voucher", name: "VOUCHER" },
@@ -356,15 +369,20 @@ const DEFAULT_BANNERS = [
           return c;
         });
 
+        // Prepend "ALL SERVICES" category if not already present
+        if (!list.some(c => c.id === "all")) {
+          list = [{ id: "all", name: "ALL SERVICES" }, ...list];
+        }
+
         setDbCategories(list);
         if (!isCategoryInitialized && list.length > 0) {
-          setSelectedCategory(list[0].id);
+          setSelectedCategory("all");
           setIsCategoryInitialized(true);
         }
       } else {
         setDbCategories(defaultCats);
         if (!isCategoryInitialized) {
-          setSelectedCategory("ffbots");
+          setSelectedCategory("all");
           setIsCategoryInitialized(true);
         }
       }
@@ -1720,14 +1738,17 @@ const DEFAULT_BANNERS = [
           {/* Dynamic home slider only shows in home section */}
           {activeSection === "home" && (() => {
             const activeBanners = dbBanners.length > 0 ? dbBanners : DEFAULT_BANNERS;
+            const currentSlide = slideIndex < activeBanners.length ? slideIndex : 0;
             return (
               <div id="home-slider" className="w-full aspect-video relative overflow-hidden border-b border-brand-blue/10 bg-zinc-950">
                 <div
                   className="flex w-full h-full transition-transform duration-1000 ease-in-out"
-                  style={{ transform: `translateX(-${slideIndex * 100}%)` }}
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                 >
                   {activeBanners.map((banner, index) => {
-                    const imageUrl = typeof banner === "string" ? banner : (banner?.url || "");
+                    const imageUrl = typeof banner === "string" 
+                      ? banner 
+                      : (banner?.url || banner?.image || banner?.bannerUrl || banner?.link || "");
                     const redirectUrl = typeof banner === "string" ? "" : (banner?.link || "");
                     
                     const imgContent = (
@@ -1736,6 +1757,9 @@ const DEFAULT_BANNERS = [
                         alt={`Promo Slide ${index + 1}`}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_BANNERS[0];
+                        }}
                       />
                     );
 
@@ -1762,7 +1786,7 @@ const DEFAULT_BANNERS = [
                       key={index}
                       onClick={() => setSlideIndex(index)}
                       className={`w-2.5 h-1.5 rounded-full transition-all cursor-pointer ${
-                        slideIndex === index ? "w-6 bg-brand-orange" : "bg-zinc-700"
+                        currentSlide === index ? "w-6 bg-brand-orange" : "bg-zinc-700"
                       }`}
                     ></div>
                   ))}
@@ -1830,6 +1854,7 @@ const DEFAULT_BANNERS = [
                     dbServices.filter((service) => {
                       const sc = (service.category || "").toLowerCase().trim();
                       const sel = (selectedCategory || "").toLowerCase().trim();
+                      if (sel === "all" || !sel) return true;
                       if (sc === sel) return true;
                       if ((sc.includes("bot") || sc === "ffbot") && (sel.includes("bot") || sel === "ffbot")) return true;
                       if ((sc.includes("vouch") || sc === "voucher_code") && (sel.includes("vouch") || sel === "voucher_code")) return true;
@@ -1847,6 +1872,7 @@ const DEFAULT_BANNERS = [
                           .filter((service) => {
                             const sc = (service.category || "").toLowerCase().trim();
                             const sel = (selectedCategory || "").toLowerCase().trim();
+                            if (sel === "all" || !sel) return true;
                             if (sc === sel) return true;
                             if ((sc.includes("bot") || sc === "ffbot") && (sel.includes("bot") || sel === "ffbot")) return true;
                             if ((sc.includes("vouch") || sc === "voucher_code") && (sel.includes("vouch") || sel === "voucher_code")) return true;
