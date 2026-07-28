@@ -186,15 +186,24 @@ export default function App() {
   const [selectedPkg, setSelectedPkg] = useState<GamePackage | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
 
+const DEFAULT_BANNERS = [
+  "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
+  "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
+];
+
   // Dynamic input fields state for active order
   const [fieldsState, setFieldsState] = useState<any>({});
 
   // Custom DB-loaded prices fallback map
   const [dbPrices, setDbPrices] = useState<any>({});
 
-  // Dynamic DB-loaded games list
-  const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
-  const [servicesLoading, setServicesLoading] = useState<boolean>(true);
+  // Dynamic DB-loaded games list (initialize with servicesData so UI renders immediately for everyone)
+  const [dbServices, setDbServices] = useState<ServiceItem[]>(servicesData);
+  const [servicesLoading, setServicesLoading] = useState<boolean>(false);
+
+  // Slider Image Banner Carousel State (initialize with DEFAULT_BANNERS so guests always see promo slides)
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [dbBanners, setDbBanners] = useState<string[]>(DEFAULT_BANNERS);
 
   // Keep activeService and selectedPkg synchronized with dbServices updates in real time
   useEffect(() => {
@@ -391,11 +400,82 @@ export default function App() {
       }
     });
 
+    // Fetch dynamic customizable prices from DB
+    const pricesRef = ref(db, "custom_prices");
+    const unsubscribePrices = onValue(pricesRef, (snapshot) => {
+      const val = snapshot.val();
+      if (val) {
+        setDbPrices(val);
+      }
+    });
+
+    // Fetch dynamic slide banners from DB
+    const bannersRef = ref(db, "banners");
+    const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        setDbBanners(DEFAULT_BANNERS);
+        return;
+      }
+
+      let parsedList: any[] = [];
+      if (Array.isArray(val)) {
+        parsedList = val;
+      } else if (typeof val === "object") {
+        if (Array.isArray((val as any).list)) {
+          parsedList = (val as any).list;
+        } else {
+          parsedList = Object.values(val);
+        }
+      }
+
+      parsedList = parsedList.filter(Boolean);
+      if (parsedList.length > 0) {
+        setDbBanners(parsedList);
+      } else {
+        setDbBanners(DEFAULT_BANNERS);
+      }
+    });
+
+    // Fetch system notifications
+    const notificationsRef = ref(db, "notifications");
+    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const list = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }))
+        .sort((a, b: any) => b.timestamp - a.timestamp);
+        setSystemNotifications(list);
+      } else {
+        setSystemNotifications([
+          {
+            id: "default-1",
+            title: "🔥 Welcome to BNY SHOP!",
+            body: "Get instant game diamonds, streaming codes, and USDT exchanges active 24/7. Our priority is your trust.",
+            timestamp: Date.now() - 3600000 * 2,
+            type: "info"
+          },
+          {
+            id: "default-2",
+            title: "⚡ FAST DELIVERY ASSURED",
+            body: "All orders are processed in 5-15 minutes. Verification requests are monitored live.",
+            timestamp: Date.now() - 3600000 * 24,
+            type: "warning"
+          }
+        ]);
+      }
+    });
+
     return () => {
       unsubscribeGames();
       unsubscribeCategories();
       unsubscribePayment();
       unsubscribeTeam();
+      unsubscribePrices();
+      unsubscribeBanners();
+      unsubscribeNotifications();
     };
   }, [db]);
 
@@ -450,10 +530,6 @@ export default function App() {
 
   // General loader states
   const [loading, setLoading] = useState(false);
-
-  // Slider Image Banner Carousel State
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [dbBanners, setDbBanners] = useState<string[]>([]);
 
   // Is Admin and Team Member detection
   const [dbTeamMembers, setDbTeamMembers] = useState<any[]>([]);
@@ -660,15 +736,6 @@ export default function App() {
       }
     });
 
-    // Fetch dynamic customizable prices from DB
-    const pricesRef = ref(db, "custom_prices");
-    const unsubscribePrices = onValue(pricesRef, (snapshot) => {
-      const val = snapshot.val();
-      if (val) {
-        setDbPrices(val);
-      }
-    });
-
     // Fetch user orders history
     const userOrdersRef = ref(db, `orders/${currentUser.uid}`);
     const unsubscribeOrders = onValue(userOrdersRef, (snapshot) => {
@@ -705,72 +772,6 @@ export default function App() {
       }
     });
 
-    // Fetch dynamic slide banners from DB
-    const bannersRef = ref(db, "banners");
-    const unsubscribeBanners = onValue(bannersRef, (snapshot) => {
-      const val = snapshot.val();
-      const fallbackBanners = [
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200",
-        "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200"
-      ];
-
-      if (!val) {
-        setDbBanners(fallbackBanners);
-        return;
-      }
-
-      let parsedList: any[] = [];
-      if (Array.isArray(val)) {
-        parsedList = val;
-      } else if (typeof val === "object") {
-        if (Array.isArray((val as any).list)) {
-          parsedList = (val as any).list;
-        } else {
-          parsedList = Object.values(val);
-        }
-      }
-
-      parsedList = parsedList.filter(Boolean);
-      if (parsedList.length > 0) {
-        setDbBanners(parsedList);
-      } else {
-        setDbBanners(fallbackBanners);
-      }
-    });
-
-    // Fetch system notifications (filtered by personal user targetUid or global)
-    const notificationsRef = ref(db, "notifications");
-    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const list = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
-        }))
-        .filter(notif => !notif.targetUid || notif.targetUid === currentUser.uid)
-        .sort((a, b: any) => b.timestamp - a.timestamp);
-        setSystemNotifications(list);
-      } else {
-        // Fallback default notifications if database node is empty
-        setSystemNotifications([
-          {
-            id: "default-1",
-            title: "🔥 Welcome to BNY SHOP!",
-            body: "Get instant game diamonds, streaming codes, and USDT exchanges active 24/7. Our priority is your trust.",
-            timestamp: Date.now() - 3600000 * 2,
-            type: "info"
-          },
-          {
-            id: "default-2",
-            title: "⚡ FAST DELIVERY ASSURED",
-            body: "All orders are processed in 5-15 minutes. Verification requests are monitored live.",
-            timestamp: Date.now() - 3600000 * 24,
-            type: "warning"
-          }
-        ]);
-      }
-    });
-
     // Fetch user support tickets
     const ticketsRef = ref(db, `support_tickets/${currentUser.uid}`);
     const unsubscribeTickets = onValue(ticketsRef, (snapshot) => {
@@ -788,11 +789,8 @@ export default function App() {
 
     return () => {
       unsubscribeDb();
-      unsubscribePrices();
       unsubscribeOrders();
       unsubscribeDeposits();
-      unsubscribeBanners();
-      unsubscribeNotifications();
       unsubscribeTickets();
     };
   }, [currentUser]);
@@ -1723,26 +1721,21 @@ export default function App() {
           </header>
 
           {/* Dynamic home slider only shows in home section */}
-          {activeSection === "home" && (
-            dbBanners.length === 0 ? (
-              <div id="home-slider" className="w-full aspect-video flex items-center justify-center bg-white border-b border-zinc-200">
-                <span className="text-black font-sans font-black text-sm uppercase tracking-wider">
-                  No banner available
-                </span>
-              </div>
-            ) : (
+          {activeSection === "home" && (() => {
+            const activeBanners = dbBanners.length > 0 ? dbBanners : DEFAULT_BANNERS;
+            return (
               <div id="home-slider" className="w-full aspect-video relative overflow-hidden border-b border-brand-blue/10 bg-zinc-950">
                 <div
                   className="flex w-full h-full transition-transform duration-1000 ease-in-out"
                   style={{ transform: `translateX(-${slideIndex * 100}%)` }}
                 >
-                  {dbBanners.map((banner, index) => {
+                  {activeBanners.map((banner, index) => {
                     const imageUrl = typeof banner === "string" ? banner : (banner?.url || "");
                     const redirectUrl = typeof banner === "string" ? "" : (banner?.link || "");
                     
                     const imgContent = (
                       <img
-                        src={imageUrl}
+                        src={imageUrl || DEFAULT_BANNERS[0]}
                         alt={`Promo Slide ${index + 1}`}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
@@ -1764,12 +1757,10 @@ export default function App() {
                     );
                   })}
                 </div>
-                
-                {/* Tagline overlay removed */}
 
                 {/* Pagination Dots */}
                 <div className="absolute bottom-4 right-5 flex gap-1.5 z-10">
-                  {dbBanners.map((_, index) => (
+                  {activeBanners.map((_, index) => (
                     <div
                       key={index}
                       onClick={() => setSlideIndex(index)}
@@ -1780,8 +1771,8 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            )
-          )}
+            );
+          })()}
 
           {/* Dynamic Render Section Router */}
           <main className="flex-1 px-4 py-6">
